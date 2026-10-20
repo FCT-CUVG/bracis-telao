@@ -2,10 +2,11 @@
 
 Apresentação de fotos para painel vertical, com referência inicial de 336 × 1008 pixels.
 
-- Importa fotos ou ZIPs e otimiza as imagens no navegador.
+- Adiciona fotos individuais ou ZIPs ao álbum atual e otimiza as imagens no navegador.
+- Lista as fotos com miniaturas, exclusão individual e opção para desfazer.
 - Alterna entre os tipos selecionados: 1, 3 ou 4 fotos, motion e panorama.
 - O modo de 1 foto preenche a altura do painel e percorre a imagem lateralmente.
-- Aceita uma marca chamada `watermark.png` dentro do ZIP, com degradê de cor e intensidade ajustáveis.
+- Aceita uma marca chamada `watermark.png` dentro do ZIP, com posição ajustável ao arrastar na prévia. O degradê de cor e intensidade ajustáveis fica atrás da marca.
 - Salva o álbum e os ajustes neste navegador quando o armazenamento local está disponível.
 
 ## Uso
