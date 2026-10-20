@@ -1,2 +1,10 @@
 .DS_Store
 Thumbs.db
+
+.firebase/
+*-debug.log
+node_modules/
+
+.wrangler/
+.dev.vars*
+.env*

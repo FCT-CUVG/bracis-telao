@@ -6,11 +6,11 @@
   <meta name="description" content="Apresentação de fotos para telão vertical.">
   <title>Fotos para o telão</title>
   <link rel="stylesheet" href="assets/style.css?v=7">
-  <script src="assets/zip.js" defer></script><script src="assets/app.js?v=8" defer></script>
-</head>
-<body>
+  <script src="assets/zip.js" defer></script><script src="assets/app.js?v=9" defer></script>
+<link rel="stylesheet" href="assets/cloud.css?v=1"><script type="module" src="assets/display.js?v=1"></script></head>
+<body class="presentation" data-cloud="display">
   <main class="workspace">
-    <section class="controls">
+    <section class="controls" hidden aria-hidden="true">
       <h1>Fotos para o telão</h1>
       <label class="dropzone" id="dropzone" for="zipInput" tabindex="0" role="button" aria-label="Escolher ZIP ou fotos">
         <span class="upload-icon">↥</span><strong id="dropTitle">Solte fotos ou um ZIP aqui</strong><span>ou clique para escolher os arquivos</span><span class="file-hint">JPG, PNG, WEBP, AVIF ou ZIP · até 600 fotos no álbum</span>
@@ -63,7 +63,7 @@
     </section>
     <section class="preview-panel" aria-label="Prévia do telão">
       <div class="preview-top"><span><i class="live-dot"></i> PRÉVIA AO VIVO</span><span id="resolutionLabel">336 × 1008 PX</span></div>
-      <div class="preview-shell"><div class="stage" id="stage"><div id="scenes"></div><div class="stage-empty" id="emptyStage"><p>Nenhuma foto carregada</p></div><div class="watermark-layer"><div id="watermarkFadeLayer" class="watermark-fade" hidden></div><img id="watermark" class="watermark" alt="" hidden><button class="watermark-drag-target" id="watermarkDragTarget" aria-label="Mover marca d’água na prévia" title="Arraste para mover a marca" hidden></button></div><div class="screen-notice" id="screenNotice" hidden></div></div></div>
+      <div class="preview-shell"><div class="stage" id="stage"><div id="scenes"></div><div class="stage-empty" id="emptyStage"><p>Carregando apresentação…</p></div><div class="watermark-layer"><div id="watermarkFadeLayer" class="watermark-fade" hidden></div><img id="watermark" class="watermark" alt="" hidden><button class="watermark-drag-target" id="watermarkDragTarget" aria-label="Mover marca d’água na prévia" title="Arraste para mover a marca" hidden></button></div><div class="screen-notice" id="screenNotice" hidden></div></div></div>
       <div class="preview-bottom"><span id="sceneLabel">TELÃO VERTICAL · 1:3</span><div><button class="text-button" id="previous" aria-label="Cena anterior" disabled>←</button><span id="sceneCounter">—</span><button class="text-button" id="next" aria-label="Próxima cena" disabled>→</button></div></div>
     </section>
   </main>

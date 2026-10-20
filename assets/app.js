@@ -1,6 +1,8 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
+  const cloudMode = document.body.dataset.cloud;
+  const cloudEvent = (type, detail) => window.dispatchEvent(new CustomEvent(type, {detail}));
   const modeNames = { single:'1 FOTO · ALTURA INTEIRA', triple:'3 FOTOS', quad:'4 FOTOS', motion:'MOTION · FAIXAS LATERAIS', pan:'PANORAMA · MOVIMENTO' };
   const availableModes = ['single','triple','quad','motion','pan'];
   const configDefaults = { modes:availableModes, duration:12, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false };
@@ -40,7 +42,8 @@
     $('photoList').replaceChildren(fragment);
   }
   async function restartPlayback(shouldPlay=playing) {
-    clearTimeout(timer);sceneVersion++;$('scenes').replaceChildren();currentScene=null;
+    clearTimeout(timer);sceneVersion++;
+    if(!photos.length){$('scenes').replaceChildren();currentScene=null;}
     history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;
     playing=shouldPlay;$('stage').classList.toggle('paused',!playing);
     $('pause').textContent=playing?'Ⅱ':'▶';$('pause').setAttribute('aria-label',playing?'Pausar apresentação':'Retomar apresentação');
@@ -50,6 +53,7 @@
   }
   async function removePhoto(photo) {
     if(busy)return;
+    if(cloudMode){cloudEvent('telao:exclude', {id:photo.id});return;}
     const index=photos.indexOf(photo);if(index<0)return;
     busy=true;enabled();
     try {
@@ -83,6 +87,7 @@
     return new Promise((resolve, reject) => { const req = db.transaction(name).objectStore(name).getAll(); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); });
   }
   async function persistAlbum() {
+    if(cloudMode)return false;
     if (!db) return false;
     try {
       const snapshot=[...photos], ids=new Set(snapshot.map(photo=>photo.id));
@@ -100,6 +105,7 @@
     } catch { return false; }
   }
   function saveConfig() {
+    if(cloudMode){cloudEvent('telao:change', {...config});return;}
     if (!db) return;
     try { const tx = db.transaction('settings','readwrite'); tx.objectStore('settings').put(config,'config'); tx.onerror = () => {}; } catch {}
   }
@@ -216,6 +222,7 @@
     return result;
   }
   async function importFiles(files) {
+    if(cloudMode)return;
     if (busy || !files.length) return;
     busy=true;enabled();$('importProgress').hidden=false;$('progress').value=0;
     const wasPlaying=playing;if(playing&&photos.length)togglePause();
@@ -343,11 +350,12 @@
     await requestWakeLock();
   }
   function exitPresentation() {
+    if(cloudMode==='display')return;
     document.body.classList.remove('presentation','controls-visible');$('exitPresentation').hidden=true;
     if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
     if(wakeLock) {wakeLock.release().catch(()=>{});wakeLock=null;}
   }
-  function showControls() {if(!document.body.classList.contains('presentation'))return;document.body.classList.add('controls-visible');clearTimeout(uiTimer);uiTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),2400);}
+  function showControls() {if(cloudMode==='display')return;if(!document.body.classList.contains('presentation'))return;document.body.classList.add('controls-visible');clearTimeout(uiTimer);uiTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),2400);}
   async function exportAlbum() {
     if(!photos.length||busy)return;
     busy=true;enabled();status('Preparando o ZIP otimizado…');
@@ -424,6 +432,7 @@
     busy=true;enabled();const oldPhotos=photos;photos=[];removedPhoto=null;dirtyPhotos.clear();renderPhotoList();await restartPlayback();oldPhotos.forEach(photo=>URL.revokeObjectURL(photo.url));const saved=await persistAlbum();busy=false;enabled();status(saved?'Álbum apagado deste navegador.':'Álbum retirado desta sessão, mas não foi possível salvar a exclusão.',!saved);
   });
   document.addEventListener('keydown',event=>{
+    if(cloudMode==='display')return;
     if(event.key==='Escape'){exitPresentation();return;}
     if(/^(INPUT|SELECT|TEXTAREA|BUTTON|SUMMARY)$/.test(event.target.tagName)||event.target.closest('[role=button]')||busy)return;
     if(event.code==='Space'){event.preventDefault();togglePause();}if(event.key==='ArrowRight'){event.preventDefault();nextScene();}if(event.key==='ArrowLeft'){event.preventDefault();previousScene();}
@@ -452,5 +461,25 @@
     }catch{status('Armazenamento local indisponível. Você pode importar e exibir; salve o ZIP otimizado antes de fechar.',true);syncConfig();}
     finally{busy=false;renderPhotoList();enabled();}
   }
-  initialize();
+  if(cloudMode) {
+    syncConfig();enabled();
+    window.Telao={
+      getConfig:()=>structuredClone(config),
+      setConfig(value){config={...configDefaults,...value};config.modes=availableModes.filter(mode=>config.modes.includes(mode));if(!config.modes.length)config.modes=[...availableModes];syncConfig();},
+      async setAlbum(items){
+        const old=photos;photos=items.map(p=>({...p,url:URL.createObjectURL(p.blob)}));
+        await restartPlayback();old.forEach(p=>URL.revokeObjectURL(p.url));enabled();
+      },
+      async setMark(value){if(value&&!value.bounds)value.bounds=await measureWatermark(value.blob);setWatermark(value);syncConfig();},
+      status,
+      message(text){$('emptyStage').querySelector('p').textContent=text;},
+      refresh:()=>restartPlayback(),
+    };
+    cloudEvent('telao:ready');
+    if(cloudMode==='display'){
+      requestWakeLock();
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestWakeLock();});
+      document.addEventListener('dblclick',()=>document.documentElement.requestFullscreen?.().catch(()=>{}));
+    }
+  }else initialize();
 })();

@@ -1,40 +1,65 @@
-# Fotos para o telão
+# BRACIS — fotos para o telão
 
-Página estática para apresentação vertical, sem conta, servidor de aplicação ou bibliotecas externas. O álbum é escolhido no computador que exibe o telão. Não há integração automática com o Google Drive.
+- **Exibição automática:** https://bracis-telao.web.app/
+- **Painel:** https://bracis-telao.web.app/admin
+- **Versão local com fotos/ZIP:** https://bracis-telao.web.app/local
+- **Código:** https://github.com/FCT-CUVG/bracis-telao
 
-## Como usar
+O telão abre diretamente a apresentação publicada. Não exige login, importação ou ajustes no computador de exibição. O painel usa login Google; a autorização de gravação é aplicada no Firestore e no servidor de fotos.
 
-1. Baixe as fotos do Drive como ZIP. Se houver vários ZIPs, selecione todos juntos.
-2. Inclua uma imagem chamada **watermark.png**, **watermark.jpg**, **watermark.webp** ou **watermark.avif**, em qualquer pasta do ZIP. O nome não diferencia maiúsculas e minúsculas. Para transparência, use PNG. Se houver mais de uma marca, prevalece a última encontrada.
-3. Abra o site e solte o ZIP na área de importação. Você também pode selecionar fotos descompactadas. Novos arquivos são adicionados ao álbum atual, inclusive ao importar ZIPs. Arquivos repetidos são ignorados por conteúdo quando SHA-256 está disponível. A lista “Fotos do álbum” mostra miniaturas e nomes, com exclusão individual e opção para desfazer a última exclusão; os arquivos originais não são alterados. Importar só `watermark` mantém as fotos atuais. Um novo álbum sem `watermark` mantém a marca já carregada, que pode ser removida nos ajustes.
-4. Selecione um ou mais tipos de apresentação. A página alterna apenas entre os tipos marcados: 1 foto, 3 fotos, 4 fotos, faixas em movimento e panorama. “Todos” seleciona os cinco; mantenha ao menos um selecionado. Defina o tempo por cena e a ordem.
-5. Em Marca d’água e ajustes, defina posição, transparência e largura. “Overlay na tela inteira” mantém a proporção da marca dentro de toda a tela; use uma arte com a mesma proporção do painel para cobri-lo integralmente. A marca fica em uma camada independente acima das fotos e do degradê. Na prévia, arraste a própria marca para posicioná-la; inclusive overlays transparentes de tela inteira podem ser movidos pela área visível da arte. As setas movem a marca selecionada e Shift + seta faz ajustes maiores. “Restaurar posição da marca” remove o deslocamento manual. A posição fica salva neste navegador. A opção “Degradê atrás da marca” permite escolher cor, intensidade, área e posição do fade. “Acompanhar a marca” usa o topo para overlays completos, o rodapé para marcas inferiores e o centro para marcas centrais. Ao carregar uma marca com a mesma proporção da tela, a posição Overlay é selecionada automaticamente.
-6. Clique em **Exibir no telão**. Use Espaço para pausar, setas para navegar e Esc para voltar. O cursor e o botão de retorno desaparecem depois de alguns segundos sem movimento. Se o navegador não permitir tela cheia, use sua opção de tela cheia.
+## Uso
 
-## Resolução e aparência
+1. Adicione JPG, PNG, WEBP ou AVIF à pasta pública do Google Drive. Extraia ZIPs antes de enviá-los ao Drive. HEIC/HEIF precisam ser convertidos para JPG.
+2. Para a marca, adicione um arquivo chamado `watermark.png` à mesma pasta. A marca não precisa estar neste repositório.
+3. Entre no painel com a conta Google autorizada. Selecione os tipos de apresentação e ajuste a marca arrastando-a na prévia. O degradê fica atrás dela.
+4. Clique em **Publicar no telão**. As alterações ficam compartilhadas; fotos novas e mudanças no Drive são verificadas a cada minuto.
+5. Abra o endereço de exibição no telão. Um duplo clique tenta ativar a tela cheia; também é possível usar a opção do navegador.
 
-A referência inicial é **336 × 1008 pixels**: altura informada de 1008 e largura estimada pela proporção de 1:3. Confirme a largura no controlador e ajuste na página. A saída de vídeo do computador também precisa estar configurada para o controlador: o site não altera a resolução física do monitor.
+A lista do painel tem busca, páginas de 100 itens, visualização individual e exclusão da apresentação. O original permanece no Drive. A exclusão pode ser desfeita ou restaurada antes de publicar.
 
-Por padrão, a página preserva a proporção e centraliza a apresentação. “Preencher a saída de vídeo” destina-se a controladores que remapeiam uma saída de outra proporção no painel vertical; pode distorcer imagens quando a saída e o painel não correspondem.
+A referência é **336 × 1008**, proporção vertical 1:3. A largura ainda deve ser confirmada no controlador físico do telão.
 
-O modo de 1 foto preenche a altura do telão e percorre a imagem lateralmente, limitando o movimento às bordas da foto. Os modos de 3 e 4 fotos preservam as imagens sobre fundo branco, com zoom suave. Panorama também preenche o painel e percorre a foto lateralmente; faixas em movimento deslizam imagens na horizontal em um loop contínuo, sem espaços entre as fotos; imagens muito estreitas recebem recorte para preencher a faixa. A configuração de movimento reduzido do sistema é respeitada. Álbuns pequenos reutilizam fotos para completar uma composição.
+## Fotos e memória
 
-## Otimização e armazenamento
+O servidor consulta somente a pasta publicada. A prévia de outra pasta exige autenticação de administrador. Cada imagem precisa pertencer à pasta permitida; o servidor não funciona como proxy para URLs ou arquivos arbitrários.
 
-Fotos são convertidas no navegador para JPEG com lado maior de até 2016 pixels e qualidade 86%. A marca é convertida para PNG para preservar transparência. Os originais não são alterados. Arquivos idênticos são ignorados por conteúdo, inclusive entre importações, quando o navegador oferece SHA-256. HEIC/HEIF são ignorados com aviso: converta-os para JPG antes de importar.
+A apresentação prepara lotes de até 60 imagens e percorre os demais automaticamente. As fotos são otimizadas no navegador com lado maior de até 2016 pixels. O cache local guarda até 300 imagens otimizadas. Fotos já preparadas continuam passando durante falhas temporárias de conexão; a primeira carga e novas fotos precisam de internet. Depois de recarregar, a recuperação do cache é uma ajuda, não uma garantia de funcionamento completamente offline.
 
-O álbum e os ajustes ficam salvos no armazenamento deste navegador, neste endereço, quando disponível. Não se sincronizam com outros computadores. Limpeza de dados, navegação privada ou falta de espaço podem impedir a retenção. Importe o ZIP em cada computador que for exibir o telão.
+A pasta aceita até 5.000 arquivos diretos, sem buscar subpastas. Para coleções maiores, separe por dia/evento. ZIPs no Drive não são extraídos pelo servidor.
 
-**Baixar álbum otimizado** gera um ZIP com as fotos prontas e `watermark.png`, quando carregada. Esse ZIP pode ser levado ao computador do evento e importado normalmente; não contém os ajustes de exibição. Os arquivos não são enviados ao site ou a terceiros. A página permanece funcionando sem rede depois de aberta e com o álbum carregado; para reabrir o site, é necessária conexão ou hospedagem local.
+## Hospedagem sem plano pago
 
-Limites: 600 fotos no total por álbum, 750 MB por ZIP, 2 GB de imagens descompactadas e 80 MB por imagem. Fotos muito grandes ou corrompidas são ignoradas com aviso. ZIP comum sem senha, com compressão padrão deflate ou sem compressão; ZIP64 e volumes divididos não são compatíveis. Não extraímos arquivos para o sistema: tudo ocorre na memória do navegador.
+- **Firebase Spark:** site, login Google e configuração compartilhada.
+- **Cloudflare Workers Free:** consultas e imagens do Drive, com a chave armazenada como **Secret** `DRIVE_API_KEY`.
+- **Google Drive:** originais em pasta pública.
 
-## GitHub Pages
+Não há Cloud Functions, Cloud Run, Cloud Storage ou serviços que exijam Blaze. Não vincule faturamento nem troque os planos gratuitos se quiser manter bloqueio por cota em vez de cobrança de excedentes. O Workers Free tem limite de 100 mil requisições/dia; o Spark também tem cotas. Ao atingir os limites gratuitos, os serviços podem parar até a renovação da cota.
 
-1. Crie um repositório e envie **o conteúdo desta pasta**: `index.html`, `assets/` e `.nojekyll`. Não precisa enviar as fotos.
-2. Em **Settings → Pages**, selecione **Deploy from a branch**, branch `main`, pasta `/ (root)`, e salve.
-3. Abra o endereço informado pelo GitHub. No computador do telão, importe o ZIP e a marca. As fotos escolhidas não entram no repositório nem ficam públicas por serem importadas no player.
+A chave do Drive não está no código do navegador nem neste repositório. A configuração pública do Firebase identifica o aplicativo; não é uma credencial de administrador. A proteção depende das regras e da verificação do login, e não de esconder o HTML do painel.
 
-Também funciona em hospedagem estática comum. Para uma prévia local, sirva esta pasta com um servidor HTTP estático; por exemplo, com Python instalado: `python3 -m http.server 8080`. Abra `http://localhost:8080`. Prefira HTTPS ou localhost a abrir `index.html` diretamente, para melhor suporte a armazenamento e funções do navegador.
+## Manutenção
 
-Use um navegador atualizado com suporte a `DecompressionStream('deflate-raw')`, Canvas e IndexedDB. Se um ZIP não abrir por falta desse recurso, selecione as fotos já descompactadas. A página tenta manter a tela ligada durante a apresentação quando o navegador permite; ajuste também a suspensão do computador para o evento.
+- Projeto Firebase: `bracis-telao`.
+- Worker: `bracis-drive`, código em `worker/src/index.js`.
+- Configuração do Worker: `worker/wrangler.jsonc`.
+- Configuração publicada: documento Firestore `events/bracis`.
+- Administrador: definido em `assets/cloud-config.js`, `firestore.rules` e nas variáveis do Worker. Mantenha os três alinhados ao mudar responsáveis.
+- SDK Firebase web: CDN oficial 13.0.0.
+- Wrangler: 4.151.2, com dependências fixadas no lockfile do Worker.
+
+Instale as dependências com `pnpm --dir worker install --frozen-lockfile`; se o pnpm solicitar aprovação de builds, revise apenas `esbuild` e `workerd`. Autentique o Wrangler na conta correta antes de comandos remotos.
+
+```sh
+pnpm --dir worker test
+pnpm --dir worker exec wrangler deploy --dry-run
+pnpm --dir worker exec wrangler deploy
+firebase deploy --only firestore,hosting --project bracis-telao
+```
+
+Cadastre segredos pelo mecanismo protegido do Wrangler (`wrangler secret put DRIVE_API_KEY` ou `wrangler secret bulk` com arquivo protegido fora do repositório). Não coloque valores em argumentos de comandos, arquivos versionados ou logs. Use uma chave do Google restrita exclusivamente à API Drive, própria para o servidor. Não reutilize a chave pública de identificação do Firebase.
+
+O Hosting publica apenas os arquivos estáticos. A pasta `worker/`, arquivos de configuração, credenciais e dependências ficam fora do site estático.
+
+## Verificações
+
+Os testes do Worker cobrem álbum público, exclusões, bloqueio de arquivos externos à apresentação, acesso de administrador, sessões expiradas, CORS, métodos HTTP e proteção da chave nas respostas. A validação final também usa o Worker publicado e o navegador, pois o ambiente de Workers tem diferenças em relação ao Node.js.

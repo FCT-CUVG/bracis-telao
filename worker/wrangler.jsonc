@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "bracis-drive",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
+  "vars": {
+    "FIREBASE_PROJECT": "bracis-telao",
+    "ADMIN_EMAIL": "cleyton.slaviero@ufmt.br",
+    "DEFAULT_FOLDER": "1H1Gute-vj7GeobSbHghyHmO8v8plZOvg",
+    "ALLOWED_ORIGINS": "https://bracis-telao.web.app,https://bracis-telao.firebaseapp.com,https://fct-cuvg.github.io,http://127.0.0.1:8766"
+  }
+}

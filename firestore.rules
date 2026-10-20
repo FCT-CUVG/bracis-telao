@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function admin() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'cleyton.slaviero@ufmt.br';
+    }
+    function numberBetween(value, low, high) { return value is number && value >= low && value <= high; }
+    function settings(s) {
+      return s is map && s.keys().hasAll(['modes','duration','shuffle','watermarkPosition','watermarkOpacity','watermarkOffsetX','watermarkOffsetY','watermarkLayerVersion','watermarkSize','watermarkFade','fadeColor','fadeOpacity','fadeSize','fadePosition','screenWidth','screenHeight','fitScreen'])
+        && s.keys().size() == 17
+        && s.modes is list && s.modes.size() >= 1 && s.modes.size() <= 5 && s.modes.toSet().hasOnly(['single','triple','quad','motion','pan'])
+        && s.duration in [8,12,18,25] && s.shuffle is bool
+        && s.watermarkPosition in ['bottom-right','bottom-left','top-right','center','overlay']
+        && numberBetween(s.watermarkOpacity,10,100) && numberBetween(s.watermarkSize,10,90)
+        && numberBetween(s.watermarkOffsetX,-100,100) && numberBetween(s.watermarkOffsetY,-100,100)
+        && s.watermarkLayerVersion == 1 && s.watermarkFade is bool
+        && s.fadeColor is string && s.fadeColor.matches('^#[0-9a-fA-F]{6}$')
+        && numberBetween(s.fadeOpacity,0,100) && numberBetween(s.fadeSize,10,70)
+        && s.fadePosition in ['auto','top','center','bottom']
+        && numberBetween(s.screenWidth,100,8000) && numberBetween(s.screenHeight,100,8000) && s.fitScreen is bool;
+    }
+    match /events/bracis {
+      allow get: if true;
+      allow list, delete: if false;
+      allow create, update: if admin()
+        && request.resource.data.keys().hasOnly(['version','folderId','resourceKey','excludedIds','settings','updatedAt','updatedBy'])
+        && request.resource.data.version == 1
+        && request.resource.data.folderId is string && request.resource.data.folderId.matches('^[a-zA-Z0-9_-]{10,200}$')
+        && request.resource.data.resourceKey is string && request.resource.data.resourceKey.matches('^[a-zA-Z0-9_-]{0,200}$')
+        && request.resource.data.excludedIds is list && request.resource.data.excludedIds.size() <= 600
+        && settings(request.resource.data.settings)
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
