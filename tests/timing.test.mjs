@@ -25,3 +25,11 @@ test('The cycle avoids repeating exhausted portrait roles while unshown landscap
  const remaining={portrait:0,landscape:10,square:0,unknown:0};assert.equal(timing.nextMode(['single','mixed','motion','pan'],0,remaining).mode,'motion');
  const photos=[...Array(6).fill(portrait),...Array(54).fill(landscape)];assert.equal(timing.cycle(photos,{modes:['single','mixed','motion','pan'],duration:18,motionSpeed:.5}).seconds,684);
 });
+test('LED image sizing preserves travel width and reduces decoded pixels without upscaling',()=>{
+ assert.deepEqual(timing.imageSize(6000,4000,1008),{width:1512,height:1008});
+ assert.deepEqual(timing.imageSize(4000,6000,1008),{width:672,height:1008});
+ assert.deepEqual(timing.imageSize(3840,2160,1008),{width:1792,height:1008});
+ assert.deepEqual(timing.imageSize(320,240,1008),{width:320,height:240});
+ const p=timing.imageSize(4000,6000,1008),l=timing.imageSize(6000,4000,1008);
+ assert.ok(p.width*p.height/(1344*2016)<.251);assert.ok(l.width*l.height/(2016*1344)<.563);
+});

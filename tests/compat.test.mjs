@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const code=readFileSync(new URL('../assets/compat.js',import.meta.url),'utf8');
-function setup(window={}){const timers=[];vm.runInNewContext(code,{window,Promise,Error,setTimeout:callback=>timers.push(callback)});return {compat:window.TelaoCompat,timers};}
+function setup(window={}){const timers=[];vm.runInNewContext(code,{window,Promise,Error,setTimeout:callback=>{timers.push(callback);return timers.length-1;},clearTimeout:id=>{timers[id]=null;}});return {compat:window.TelaoCompat,timers};}
 test('Browsers without AbortSignal.timeout still cancel slow requests with AbortController',()=>{
   const controller={signal:{},abort(){this.aborted=true;}};const {compat,timers}=setup({AbortController:function(){return controller;}});
   assert.equal(compat.timeoutSignal(45000),controller.signal);assert.equal(controller.aborted,undefined);timers[0]();assert.equal(controller.aborted,true);
@@ -15,3 +15,11 @@ test('Images without decode load through events and release listeners',async()=>
   const broken=compat.decodeImage(image);listeners.get('error')();await assert.rejects(broken,/indisponível/);assert.equal(listeners.size,0);
 });
 test('Cached images without decode do not wait for an event that already fired',async()=>{const {compat}=setup();await compat.decodeImage({complete:true,naturalWidth:100});await assert.rejects(compat.decodeImage({complete:true,naturalWidth:0}),/indisponível/);});
+test('A browser decode promise that never settles cannot stop playback indefinitely',async()=>{
+ const {compat,timers}=setup(),pending=compat.decodeImage({decode:()=>new Promise(()=>{})});
+ timers[0]();await assert.rejects(pending,/não respondeu a tempo/);
+});
+test('Successful native decoding cancels its timeout and decode failures propagate',async()=>{
+ const {compat,timers}=setup();await compat.decodeImage({decode:()=>Promise.resolve()});assert.equal(timers[0],null);
+ await assert.rejects(compat.decodeImage({decode:()=>Promise.reject(Error('broken'))}),/broken/);assert.equal(timers[1],null);
+});

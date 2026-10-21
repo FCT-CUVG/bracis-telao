@@ -21,3 +21,10 @@ test('Retrying an unchanged partial batch does not restart playback',async()=>{
  const {album,batches,advance}=setup({failFirst:true});await album.update({folderId:'folder'});const initial=batches.length;
  advance(61000);await album.update({folderId:'folder'});assert.equal(batches.length,initial);
 });
+test('Changing the LED height rebuilds the image profile even with an unchanged Drive folder',async()=>{
+ const {album,batches}=setup();let height=1008;const heights=[];
+ album.player.getConfig=()=>({duration:12,screenHeight:height});
+ album.services.loadFile=async(file,watermark,targetHeight)=>{if(!watermark)heights.push(targetHeight);return {...file,blob:new Blob(['foto'])};};
+ await album.update({folderId:'folder'});const before=batches.length;assert.ok(heights.every(h=>h===1008));
+ heights.length=0;height=720;await album.update({folderId:'folder'});assert.ok(batches.length>before);assert.ok(heights.every(h=>h===720));
+});

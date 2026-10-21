@@ -1,4 +1,5 @@
 import {driveApiBase} from './cloud-config.js';
+import './timing.js';
 let tokenProvider=null;
 export const setDriveAuth=provider=>{tokenProvider=provider;};
 const supported=/\.(jpe?g|png|webp|avif)$/i, isMark=name=>/^watermark\.(jpe?g|png|webp|avif)$/i.test(name);
@@ -37,25 +38,29 @@ export async function listFolder(source){
   if(files.watermark)files.watermark={...files.watermark,source:{folderId:source.folderId,resourceKey:source.resourceKey||''}};
   return files;
 }
-async function optimize(blob,watermark){
+async function optimize(blob,watermark,targetHeight=1008){
   if(blob.size>80*1024*1024)throw Error('Imagem maior que 80 MB.');
   const url=URL.createObjectURL(blob),image=new Image();
   try {image.src=url;await window.TelaoCompat.decodeImage(image);if(image.naturalWidth*image.naturalHeight>85000000)throw Error('Imagem grande demais.');
-    const scale=Math.min(1,2016/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');
-    canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    const size=globalThis.TelaoTiming.imageSize(image.naturalWidth,image.naturalHeight,watermark?2016:targetHeight),canvas=document.createElement('canvas');
+    canvas.width=size.width;canvas.height=size.height;
     if(typeof requestIdleCallback==='function')await new Promise(resolve=>requestIdleCallback(resolve,{timeout:250}));
     const context=canvas.getContext('2d');context.drawImage(image,0,0,canvas.width,canvas.height);
     const result=await new Promise(resolve=>canvas.toBlob(resolve,watermark?'image/png':'image/jpeg',.86));if(!result)throw Error('Falha ao preparar foto.');const prepared={blob:result,width:canvas.width,height:canvas.height};canvas.width=canvas.height=1;return prepared;
   }finally{URL.revokeObjectURL(url);}
 }
-export async function loadFile(file,watermark=false){
-  const revision=`${file.modifiedTime}:${file.size||''}:${watermark}`;
+export async function loadFile(file,watermark=false,targetHeight=1008){
+  const baseRevision=`${file.modifiedTime}:${file.size||''}:${watermark}`;
+  const revision=watermark?baseRevision:`${baseRevision}:height-${Math.max(100,Math.min(2016,Number(targetHeight)||1008))}-v2`;
   const cached=await cacheGet(file.id);if(cached?.revision===revision){
     let width=cached.width||file.width,height=cached.height||file.height;
     if(!width||!height){const url=URL.createObjectURL(cached.blob),image=new Image();try{image.src=url;await window.TelaoCompat.decodeImage(image);width=image.naturalWidth;height=image.naturalHeight;await cachePut({...cached,width,height});}finally{URL.revokeObjectURL(url);}}
     return {...file,blob:cached.blob,width,height};
   }
-  const response=await request(`image/${encodeURIComponent(file.id)}`,file.source),prepared=await optimize(await response.blob(),watermark);
+  // The previous cached image is already large enough for this smaller profile.
+  // Migrate it locally once instead of downloading the album again.
+  const blob=cached?.revision===baseRevision&&!watermark?cached.blob:await (await request(`image/${encodeURIComponent(file.id)}`,file.source)).blob();
+  const prepared=await optimize(blob,watermark,targetHeight);
   await cachePut({id:file.id,revision,...prepared,cachedAt:Date.now()});return {...file,...prepared};
 }
 export const signature=(source,files)=>JSON.stringify([source.folderId,source.resourceKey,files.photos.map(f=>[f.id,f.modifiedTime,f.size]),files.watermark&&[files.watermark.id,files.watermark.modifiedTime]]);

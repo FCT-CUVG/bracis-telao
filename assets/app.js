@@ -8,11 +8,16 @@
   const configDefaults = { modes:availableModes, duration:12, motionSpeed:0.5, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false };
   let config = { ...configDefaults }, photos = [], mark = null, markURL = null, db = null;
   let history = [], historyIndex = -1, bag = [], cursor = 0, sequenceCursor = 0, playing = true, busy = false, sceneVersion = 0;
-  let timer, sceneStarted = 0, remaining = 12000, currentScene = null, uiTimer, wakeLock = null;
+  let sceneStarted = 0, remaining = 12000, currentScene = null, uiTimer, wakeLock = null;
   let nextPhotoId = 0, removedPhoto = null, persistedPhotoIds = new Set();
   const dirtyPhotos = new Set();
   let watermarkBounds=null,watermarkDrag=null,watermarkFrame=null;
   const completedPhotos=new Set(),selectedPhotos=new Set();
+  const playback=window.TelaoPlayback.create({
+    shouldRun:()=>playing&&photos.length>0,
+    advance:async()=>{const shown=history[historyIndex];if(shown)shown.indices.forEach(index=>completedPhotos.add(index));await nextScene();},
+    report:(reason,error)=>{console.warn('Reprodução recuperada:',reason,error?.message||'');try{localStorage.setItem('bracis-playback-recovery',JSON.stringify({at:new Date().toISOString(),reason,scene:historyIndex+1}));}catch{}},
+  });
   const displayName = name => name.replace(/\\/g, '/').split('/').pop();
   const isMark = name => /^watermark\.(png|jpe?g|webp|avif)$/i.test(displayName(name));
   const isPhoto = name => /\.(jpe?g|png|webp|avif)$/i.test(name);
@@ -43,7 +48,7 @@
     $('photoList').replaceChildren(fragment);
   }
   async function restartPlayback(shouldPlay=playing) {
-    clearTimeout(timer);sceneVersion++;
+    playback.cancel();sceneVersion++;
     if(!photos.length){$('scenes').textContent='';currentScene=null;}
     history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;completedPhotos.clear();selectedPhotos.clear();
     playing=shouldPlay;$('stage').classList.toggle('paused',!playing);
@@ -212,8 +217,8 @@
     if (blob.size > 80 * 1024 * 1024) throw Error('Uma imagem excede o limite de 80 MB.');
     const img = await loadImage(blob);
     if (img.naturalWidth * img.naturalHeight > 85000000) throw Error('Imagem grande demais para processar neste navegador.');
-    const ratio = Math.min(1, 2016 / Math.max(img.naturalWidth,img.naturalHeight));
-    const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(img.naturalWidth * ratio)); canvas.height = Math.max(1, Math.round(img.naturalHeight * ratio));
+    const size=window.TelaoTiming.imageSize(img.naturalWidth,img.naturalHeight,watermark?2016:config.screenHeight);
+    const canvas = document.createElement('canvas'); canvas.width=size.width;canvas.height=size.height;
     const context = canvas.getContext('2d');
     if (!context) throw Error('Não foi possível preparar a imagem.');
     if (!watermark) { context.fillStyle = '#111'; context.fillRect(0,0,canvas.width,canvas.height); }
@@ -324,7 +329,7 @@
   }
   function makeImage(url, className) { const img = new Image(); img.alt = ''; img.decoding='async'; img.src = url; img.className = className; img.draggable = false; return img; }
   async function showScene(spec) {
-    const version = ++sceneVersion; clearTimeout(timer);
+    const version = ++sceneVersion; playback.cancel();
     const scene = document.createElement('div'); scene.className = `scene ${spec.mode}`; scene.style.setProperty('--scene-duration',`${window.TelaoTiming.sceneSeconds(spec.mode,config)}s`);
     const loads = [];
     if (spec.mode === 'motion') {
@@ -346,12 +351,12 @@
     if (version !== sceneVersion) return;
     const old=currentScene; $('scenes').append(scene); currentScene=scene;layoutPanorama(scene);
     scene.getBoundingClientRect(); scene.classList.add('visible');
-    if(old) setTimeout(()=>old.remove(),900);
+    if(old) setTimeout(()=>{old.querySelectorAll('img').forEach(image=>image.removeAttribute('src'));old.remove();},900);
     $('sceneLabel').textContent=modeNames[spec.mode]; $('sceneCounter').textContent=String(historyIndex+1).padStart(2,'0');
     remaining=window.TelaoTiming.sceneSeconds(spec.mode,config)*1000;
     if(playing) schedule();
   }
-  function schedule() { clearTimeout(timer);sceneStarted=performance.now();timer=setTimeout(()=>{const shown=history[historyIndex];if(shown)shown.indices.forEach(index=>completedPhotos.add(index));nextScene();},remaining); }
+  function schedule() {sceneStarted=performance.now();playback.arm(remaining);}
   async function nextScene() {
     if(!photos.length)return;
     if(historyIndex<history.length-1) historyIndex++;
@@ -362,7 +367,7 @@
   function togglePause() {
     if(!photos.length)return;
     playing=!playing;
-    if(playing) schedule();else {clearTimeout(timer);remaining=Math.max(100,remaining-(performance.now()-sceneStarted));}
+    if(playing) schedule();else {playback.cancel();remaining=Math.max(100,remaining-(performance.now()-sceneStarted));}
     $('stage').classList.toggle('paused',!playing); $('pause').textContent=playing?'Ⅱ':'▶';$('pause').setAttribute('aria-label',playing?'Pausar apresentação':'Retomar apresentação');
     if(document.body.classList.contains('presentation')) notice(playing?'Reproduzindo':'Pausado');
   }
@@ -486,6 +491,7 @@
     finally{busy=false;renderPhotoList();enabled();}
   }
   if(cloudMode) {
+    setInterval(()=>playback.check(),5000);
     syncConfig();enabled();
     window.Telao={
       getConfig:()=>JSON.parse(JSON.stringify(config)),
@@ -503,7 +509,7 @@
     cloudEvent('telao:ready');
     if(cloudMode==='display'){
       requestWakeLock();
-      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestWakeLock();});
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){requestWakeLock();playback.check();}});
       document.addEventListener('dblclick',()=>document.documentElement.requestFullscreen?.().catch(()=>{}));
     }
   }else initialize();

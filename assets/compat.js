@@ -2,14 +2,15 @@
 (function () {
   'use strict';
   window.TelaoCompat = {
-    decodeImage: function (image) {
-      if (typeof image.decode === 'function') return image.decode();
+    decodeImage: function (image, milliseconds) {
       return new Promise(function (resolve, reject) {
-        if (image.complete) { if (image.naturalWidth) resolve(); else reject(new Error('Imagem indisponível.')); return; }
-        function clean() { image.removeEventListener('load', loaded); image.removeEventListener('error', failed); }
-        function loaded() { clean(); resolve(); }
-        function failed() { clean(); reject(new Error('Imagem indisponível.')); }
-        image.addEventListener('load', loaded); image.addEventListener('error', failed);
+        var settled=false,timer=setTimeout(function(){finish(new Error('A imagem não respondeu a tempo.'));},milliseconds||15000);
+        function finish(error){if(settled)return;settled=true;clearTimeout(timer);if(image.removeEventListener){image.removeEventListener('load',loaded);image.removeEventListener('error',failed);}if(error)reject(error);else resolve();}
+        function loaded(){finish();}
+        function failed(){finish(new Error('Imagem indisponível.'));}
+        if(typeof image.decode==='function'){Promise.resolve().then(function(){return image.decode();}).then(loaded,finish);return;}
+        if(image.complete){if(image.naturalWidth)loaded();else failed();return;}
+        image.addEventListener('load',loaded);image.addEventListener('error',failed);
       });
     },
     timeoutSignal: function (milliseconds) {

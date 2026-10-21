@@ -13,7 +13,7 @@ export class DriveAlbum {
       const available=files.photos.filter(file=>!(source.excludedIds||[]).includes(file.id));
       const selected=globalThis.TelaoTiming.eligible(available,this.player.getConfig().modes);
       const allActive=available.filter((file,index)=>selected.includes(index)||!file.width||!file.height);
-      const nextSignature=signature(source,{...files,photos:allActive});
+      const nextSignature=signature(source,{...files,photos:allActive})+`:height-${this.player.getConfig().screenHeight||1008}`;
       const progress=this.player.getPlaybackProgress?.();
       const rotating=allActive.length>60&&(progress?progress.total>0&&progress.completed>=progress.total:this.services.now()>=this.rotateAt);
       if(!force&&nextSignature===this.currentSignature&&!rotating&&this.services.now()<this.retryAt)return;
@@ -27,7 +27,7 @@ export class DriveAlbum {
       const previous=this.loaded;
       // Keep existing scenes playing while the next album is prepared.
       const queue=[...active];
-      const worker=async(workerIndex)=>{while(queue.length){if((this.loaded.size||previewStarted)&&workerIndex>0)return;const file=queue.shift();try{loaded.set(file.id,await this.services.loadFile(file));}catch{failures++;if(previous.has(file.id))loaded.set(file.id,previous.get(file.id));}
+      const worker=async(workerIndex)=>{while(queue.length){if((this.loaded.size||previewStarted)&&workerIndex>0)return;const file=queue.shift();try{loaded.set(file.id,await this.services.loadFile(file,false,this.player.getConfig().screenHeight));}catch{failures++;if(previous.has(file.id))loaded.set(file.id,previous.get(file.id));}
         done++;this.onStatus(`Preparando fotos: ${done} / ${active.length}${files.ignored?` · ${files.ignored} HEIC ignorados`:''}`);
         if(!this.loaded.size&&!previewStarted&&loaded.size>=Math.min(3,active.length)){previewStarted=true;await this.player.setAlbum(active.filter(f=>loaded.has(f.id)).map(f=>loaded.get(f.id)));}
       }};

@@ -21,6 +21,7 @@
     return {seconds:seconds,scenes:scenes,photos:indices.length};
   }
   function cover(w,h,containerWidth,containerHeight){var scale=Math.max(containerWidth/w,containerHeight/h)*1.025,width=w*scale,height=h*scale,dx=Math.max(0,width-containerWidth),dy=Math.max(0,height-containerHeight);return {width:width,height:height,startX:dy>dx?-dx/2:0,startY:dy>dx?0:-dy/2,endX:dy>dx?-dx/2:-dx,endY:dy>dx?-dy:-dy/2};}
+  function imageSize(w,h,targetHeight){var limit=Math.max(100,Math.min(2016,Number(targetHeight)||1008)),scale=Math.min(1,2016/Math.max(w,h),limit/h);return {width:Math.max(1,Math.round(w*scale)),height:Math.max(1,Math.round(h*scale))};}
   function format(seconds){var minutes=Math.floor(seconds/60),rest=Math.round(seconds%60);return (minutes?minutes+' min':'')+(minutes&&rest?' ':'')+(rest||!minutes?rest+' s':'');}
-  root.TelaoTiming={modes:modes,orientation:orientation,available:available,eligible:eligible,modeRoles:modeRoles,dominant:dominant,nextMode:nextMode,sceneSeconds:sceneSeconds,cycle:cycle,cover:cover,format:format};
+  root.TelaoTiming={modes:modes,orientation:orientation,available:available,eligible:eligible,modeRoles:modeRoles,dominant:dominant,nextMode:nextMode,sceneSeconds:sceneSeconds,cycle:cycle,cover:cover,imageSize:imageSize,format:format};
 }(typeof window!=='undefined'?window:globalThis));
