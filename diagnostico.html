@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Teste do navegador do telão</title>
+  <link rel="stylesheet" href="assets/style.css?v=9">
+  <style>
+    body{padding:24px;font:15px/1.5 Arial,sans-serif;color:#202124;background:white}main{max-width:780px;margin:auto}h1{font-size:25px;margin-bottom:12px}p{margin:12px 0}ul{padding:0;list-style:none}li{border-bottom:1px solid #ddd;padding:10px 0}li strong{display:block}li span{font-size:13px;color:#666}.ok strong{color:#167039}.fail strong{color:#a62525}.warn strong{color:#8a5900}#summary{padding:14px;border:1px solid #ddd;border-radius:6px}a{color:#245bd5}.test-area{display:flex;gap:20px;flex-wrap:wrap;align-items:start}.test-area .stage{width:168px;height:300px;--stage-width:168px;--scene-duration:6s}.test-area img.sample{max-width:180px;max-height:300px}textarea{width:100%;font:12px/1.5 monospace;padding:10px}button{margin-right:16px;padding:10px}small{display:block;color:#666}
+  </style>
+  <script src="assets/compat.js?v=1" defer></script><script src="assets/diagnostico.js?v=1" defer></script>
+  <script type="module" src="assets/diagnostico-module.js?v=1"></script>
+</head>
+<body><main>
+  <h1>Teste do navegador do telão</h1>
+  <p>Abra este endereço no equipamento que vai exibir as fotos. O teste não altera a apresentação e não exige login.</p>
+  <p id="summary" role="status">Aguardando JavaScript. Se esta mensagem não mudar, este navegador não consegue executar o teste.</p>
+  <noscript><p>JavaScript está desativado. O telão precisa de JavaScript para funcionar.</p></noscript>
+  <ul id="results">
+    <li id="check-core"><strong>Recursos básicos: aguardando</strong><span></span></li>
+    <li id="check-modules"><strong>Código da apresentação: aguardando</strong><span></span></li>
+    <li id="check-cloud"><strong>Conexão da configuração: aguardando</strong><span></span></li>
+    <li id="check-album"><strong>Lista do Drive: aguardando</strong><span></span></li>
+    <li id="check-photo"><strong>Foto real do álbum: aguardando</strong><span></span></li>
+    <li id="check-motion"><strong>Movimento das faixas: aguardando</strong><span></span></li>
+    <li id="check-canvas"><strong>Preparo de imagens: aguardando</strong><span></span></li>
+    <li id="check-cache"><strong>Cache local: aguardando</strong><span></span></li>
+  </ul>
+  <div class="test-area"><div><p>Estas faixas devem se mover:</p><div class="stage" id="motionStage"><div class="scene motion visible" id="motionScene"></div></div></div><div><p>Foto carregada do álbum:</p><img id="samplePhoto" class="sample" alt="Foto usada no teste de conexão" hidden></div></div>
+  <p><button id="repeat">Testar novamente</button><a href="./">Abrir exibição</a> · <a href="admin">Abrir painel</a></p>
+  <p>Resultado aprovado confirma os testes desta página. Ainda é necessário deixar a <b>exibição real rodando por pelo menos 30 minutos</b>, verificar movimento, proporção e marca d’água, e reiniciar o equipamento para conferir a retomada. O teste não garante estabilidade prolongada ou funcionamento sem internet.</p>
+  <p>Se houver falha, copie este relatório e envie para quem administra o sistema. Nada é enviado automaticamente.</p>
+  <textarea id="report" rows="9" readonly aria-label="Relatório do navegador"></textarea>
+</main></body></html>

@@ -27,7 +27,7 @@ async function request(path,source={}){
   if(source.resourceKey)url.searchParams.set('resourceKey',source.resourceKey);
   const headers={};
   if(tokenProvider){const token=await tokenProvider();if(token){headers.Authorization=`Bearer ${token}`;url.searchParams.set('preview','1');}}
-  const response=await fetch(url,{headers,signal:AbortSignal.timeout(45000)});
+  const response=await fetch(url,{headers,signal:window.TelaoCompat.timeoutSignal(45000)});
   if(!response.ok){const problem=await response.json().catch(()=>({}));throw Error(problem.error||`O servidor respondeu ${response.status}.`);}
   return response;
 }
@@ -40,7 +40,7 @@ export async function listFolder(source){
 async function optimize(blob,watermark){
   if(blob.size>80*1024*1024)throw Error('Imagem maior que 80 MB.');
   const url=URL.createObjectURL(blob),image=new Image();
-  try {image.src=url;await image.decode();if(image.naturalWidth*image.naturalHeight>85000000)throw Error('Imagem grande demais.');
+  try {image.src=url;await window.TelaoCompat.decodeImage(image);if(image.naturalWidth*image.naturalHeight>85000000)throw Error('Imagem grande demais.');
     const scale=Math.min(1,2016/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');
     canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
     const context=canvas.getContext('2d');context.drawImage(image,0,0,canvas.width,canvas.height);

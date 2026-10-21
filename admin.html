@@ -5,8 +5,8 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Apresentação de fotos para telão vertical.">
   <title>Fotos para o telão</title>
-  <link rel="stylesheet" href="assets/style.css?v=7">
-  <script src="assets/zip.js" defer></script><script src="assets/app.js?v=9" defer></script>
+  <link rel="stylesheet" href="assets/style.css?v=9">
+  <script src="assets/compat.js?v=1" defer></script><script src="assets/zip.js" defer></script><script src="assets/app.js?v=10" defer></script>
 <link rel="stylesheet" href="assets/cloud.css?v=1"><script type="module" src="assets/admin.js?v=1"></script></head>
 <body data-cloud="admin">
   <section id="authGate" class="auth-gate"><h1>Painel do telão</h1><p id="authStatus" role="status">Conectando…</p><button id="loginGoogle" class="primary" hidden>Entrar com Google</button></section>
@@ -15,7 +15,7 @@
       <div class="admin-heading"><h1>Painel do telão</h1><button id="logout" class="text-button">Sair</button></div>
       <p class="muted" id="adminIdentity"></p>
       <div class="cloud-source"><label for="driveFolder">Pasta do Google Drive</label><input id="driveFolder" type="url" placeholder="Cole o link da pasta pública"><div class="album-toolbar"><button id="loadDrive" class="secondary small-button">Carregar pasta</button><a id="openDrive" class="secondary small-button" target="_blank" rel="noopener">Adicionar fotos no Drive ↗</a></div><p class="muted">Use uma pasta pública. Fotos novas entram automaticamente. Para a marca, coloque watermark.png na pasta.</p></div>
-      <div class="publish-bar"><button id="publish" class="primary" disabled>Publicar no telão</button><a href="./" class="secondary" target="_blank" rel="noopener">Abrir exibição ↗</a></div><p id="publishStatus" class="muted" role="status">Carregando ajustes publicados…</p>
+      <div class="publish-bar"><button id="publish" class="primary" disabled>Publicar no telão</button><a href="./" class="secondary" target="_blank" rel="noopener">Abrir exibição ↗</a></div><p id="publishStatus" class="muted" role="status">Carregando ajustes publicados…</p><p><a href="diagnostico" target="_blank" rel="noopener">Testar navegador do telão ↗</a></p>
       <label hidden class="dropzone" id="dropzone" for="zipInput" tabindex="0" role="button" aria-label="Escolher ZIP ou fotos">
         <span class="upload-icon">↥</span><strong id="dropTitle">Solte fotos ou um ZIP aqui</strong><span>ou clique para escolher os arquivos</span><span class="file-hint">JPG, PNG, WEBP, AVIF ou ZIP · até 600 fotos no álbum</span>
       </label>

@@ -122,13 +122,13 @@ kbd { font: inherit; border: 1px solid #d0d4da; padding: 1px 4px; border-radius:
 .live-dot { display: none; }
 .preview-shell { min-height: 630px; background: #fff; border: 1px solid var(--line); border-radius: 7px; display: flex; align-items: center; justify-content: center; padding: 26px; position: relative; }
 .stage { position: relative; overflow: hidden; isolation: isolate; container-type: size; aspect-ratio: var(--stage-ratio); width: auto; height: 576px; background: #fff; border: 1px solid #cbd0d7; flex: none; }
-#scenes { position: absolute; inset: 0; z-index: 0; }
-.stage-empty { position: absolute; inset: 0; z-index: 0; background: #fff; display: flex; align-items: center; justify-content: center; padding: 18px; text-align: center; }
+#scenes { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 0; }
+.stage-empty { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 0; background: #fff; display: flex; align-items: center; justify-content: center; padding: 18px; text-align: center; }
 .stage-empty p { font-size: 12px; line-height: 1.5; color: var(--muted); }
 .preview-bottom { padding-top: 12px; }
 .preview-bottom > div { display: flex; align-items: center; gap: 10px; }
 .preview-bottom button { font-size: 18px; }
-.scene { position: absolute; inset: 0; overflow: hidden; background: #fff; display: grid; gap: 1.2cqw; opacity: 0; transition: opacity .85s ease; }
+.scene { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; overflow: hidden; background: #fff; display: grid; gap: calc(var(--stage-width,192px) * .012); gap: 1.2cqw; opacity: 0; transition: opacity .85s ease; }
 .scene.visible { opacity: 1; }
 .scene.single, .scene.pan { grid-template-rows: 1fr; }
 .scene.triple, .scene.motion { grid-template-rows: repeat(3,1fr); }
@@ -141,9 +141,9 @@ kbd { font: inherit; border: 1px solid #d0d4da; padding: 1px 4px; border-radius:
 .scene.single .photo-main, .scene.pan .photo-main { object-fit: cover; max-width: none; animation: panorama var(--scene-duration,12s) linear both; }
 .ribbon { display: flex; position: absolute; left: 0; top: 0; height: 100%; width: max-content; gap: 0; animation: ribbonTravel var(--scene-duration,12s) linear infinite; }
 .ribbon.reverse { animation-direction: reverse; }
-.ribbon img { height: 100%; width: auto; min-width: 100cqw; max-width: none; object-fit: cover; display: block; flex-shrink: 0; }
+.ribbon img { height: 100%; width: auto; min-width: var(--stage-width,192px); min-width: 100cqw; max-width: none; object-fit: cover; display: block; flex-shrink: 0; }
 .paused .photo-main, .paused .ribbon { animation-play-state: paused; }
-.watermark-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; isolation: isolate; }
+.watermark-layer { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 2; pointer-events: none; isolation: isolate; }
 .watermark-fade { position: absolute; z-index: 0; left: 0; right: 0; pointer-events: none; }
 .watermark { position: absolute; z-index: 1; object-fit: contain; pointer-events: none; width: 30%; max-height: 25%; right: 5%; bottom: 2%; opacity: 1; }
 .watermark-drag-target { position: absolute; z-index: 2; pointer-events: auto; touch-action: none; cursor: grab; border: 1px dashed transparent; border-radius: 3px; padding: 0; background: transparent; }
@@ -153,7 +153,7 @@ kbd { font: inherit; border: 1px solid #d0d4da; padding: 1px 4px; border-radius:
 .watermark[data-position=bottom-left] { right: auto; left: 5%; }
 .watermark[data-position=top-right] { bottom: auto; top: 2%; }
 .watermark[data-position=center] { left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%,-50%); }
-.watermark[data-position=overlay] { inset: 0; width: 100% !important; height: 100%; max-height: none; transform: none; }
+.watermark[data-position=overlay] { top: 0; right: 0; bottom: 0; left: 0; inset: 0; width: 100% !important; height: 100%; max-height: none; transform: none; }
 .screen-notice { position: absolute; z-index: 10; bottom: 3%; left: 8%; right: 8%; padding: 10px; background: #fffffff0; color: #202124; border: 1px solid var(--line); border-radius: 5px; text-align: center; font-size: 12px; }
 .import-progress { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 11px; }
 progress { width: 100%; height: 5px; accent-color: var(--accent); }
@@ -161,10 +161,10 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
 .presentation { overflow: hidden; background: #fff; cursor: none; }
 .presentation .controls, .presentation .preview-top, .presentation .preview-bottom { display: none; }
 .presentation .workspace { display: block; padding: 0; margin: 0; max-width: none; }
-.presentation .preview-panel { position: fixed; inset: 0; }
-.presentation .preview-shell { height: 100dvh; min-height: 0; padding: 0; border: 0; border-radius: 0; background: #fff; }
-.presentation .stage { height: min(100dvh,calc(100vw * var(--screen-h) / var(--screen-w))); width: auto; border: 0; }
-.presentation.fill-output .stage { height: 100dvh; width: 100vw; aspect-ratio: auto; }
+.presentation .preview-panel { position: fixed; top: 0; right: 0; bottom: 0; left: 0; inset: 0; }
+.presentation .preview-shell { height: 100vh; height: 100dvh; min-height: 0; padding: 0; border: 0; border-radius: 0; background: #fff; }
+.presentation .stage { height: 100vh; height: min(100vh,calc(100vw * var(--screen-h) / var(--screen-w))); height: min(100dvh,calc(100vw * var(--screen-h) / var(--screen-w))); width: auto; border: 0; }
+.presentation.fill-output .stage { height: 100vh; height: 100dvh; width: 100vw; aspect-ratio: auto; }
 .presentation.controls-visible { cursor: default; }
 .presentation:not(.controls-visible) .exit-presentation { opacity: 0; pointer-events: none; }
 .presentation .exit-presentation:focus-visible { opacity: 1; pointer-events: auto; }
@@ -172,7 +172,9 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
 @keyframes gentleZoomBack { from { transform: scale(1.045); } to { transform: scale(1); } }
 @keyframes panorama { from { object-position: 0% 50%; } to { object-position: 100% 50%; } }
 @keyframes ribbonTravel { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@media (prefers-reduced-motion:reduce) { .photo-main, .ribbon { animation: none !important; } .scene { transition: opacity .15s; } }
+/* Photo motion is explicitly chosen in the player, including on kiosk systems
+   with reduced motion enabled. Keep only the scene transition shorter. */
+@media (prefers-reduced-motion:reduce) { .scene { transition: opacity .15s; } }
 @media (min-width:1600px) { .workspace { max-width: 1250px; gap: 100px; padding-top: 55px; } .preview-shell { min-height: 720px; } .stage { height: 660px; } }
 @media (max-width:950px) { .workspace { gap: 35px; padding-top: 30px; } .preview-shell { padding: 20px 10px; min-height: 580px; } .stage { height: 530px; } }
 @media (max-width:650px) {
@@ -182,5 +184,5 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
   .preview-shell { min-height: 540px; }
   .stage { height: 490px; }
   .presentation .preview-panel { position: fixed; }
-  .presentation .stage { height: min(100dvh,calc(100vw * var(--screen-h) / var(--screen-w))); }
+  .presentation .stage { height: 100vh; height: min(100vh,calc(100vw * var(--screen-h) / var(--screen-w))); height: min(100dvh,calc(100vw * var(--screen-h) / var(--screen-w))); }
 }

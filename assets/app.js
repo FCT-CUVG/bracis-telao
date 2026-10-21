@@ -43,7 +43,7 @@
   }
   async function restartPlayback(shouldPlay=playing) {
     clearTimeout(timer);sceneVersion++;
-    if(!photos.length){$('scenes').replaceChildren();currentScene=null;}
+    if(!photos.length){$('scenes').textContent='';currentScene=null;}
     history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;
     playing=shouldPlay;$('stage').classList.toggle('paused',!playing);
     $('pause').textContent=playing?'Ⅱ':'▶';$('pause').setAttribute('aria-label',playing?'Pausar apresentação':'Retomar apresentação');
@@ -125,7 +125,6 @@
     $('opacityValue').textContent = `${config.watermarkOpacity}%`; $('sizeValue').textContent = `${config.watermarkSize}%`;
     document.body.classList.toggle('fill-output', config.fitScreen);
     const image = $('watermark'); image.dataset.position = config.watermarkPosition; image.style.opacity = config.watermarkOpacity / 100; image.style.width = config.watermarkSize + '%';
-    image.style.translate=`${config.watermarkOffsetX}cqw ${config.watermarkOffsetY}cqh`;
     renderWatermarkFade();queueWatermarkGeometry();
   }
   function renderWatermarkFade() {
@@ -156,6 +155,9 @@
   }
   function updateWatermarkGeometry() {
     const image=$('watermark'),target=$('watermarkDragTarget'),stage=$('stage');
+    if(!(window.CSS&&CSS.supports&&CSS.supports('aspect-ratio','1 / 3')))stage.style.width=document.body.classList.contains('presentation')&&config.fitScreen?'100vw':`${stage.clientHeight*config.screenWidth/config.screenHeight}px`;
+    stage.style.setProperty('--stage-width',`${stage.clientWidth}px`);
+    image.style.transform=(config.watermarkPosition==='center'?'translate(-50%,-50%) ':'')+`translate(${stage.clientWidth*config.watermarkOffsetX/100}px,${stage.clientHeight*config.watermarkOffsetY/100}px)`;
     if(!mark||image.hidden||!image.complete||!image.naturalWidth){target.hidden=true;watermarkBounds=null;return;}
     const box=image.getBoundingClientRect(),panel=stage.getBoundingClientRect();
     const scale=Math.min(box.width/image.naturalWidth,box.height/image.naturalHeight);
@@ -172,7 +174,6 @@
     const minY=-bounds.top/panel.height*100,maxY=(panel.height-bounds.top-bounds.height)/panel.height*100;
     config.watermarkOffsetX+=Math.max(minX,Math.min(maxX,dx));
     config.watermarkOffsetY+=Math.max(minY,Math.min(maxY,dy));
-    $('watermark').style.translate=`${config.watermarkOffsetX}cqw ${config.watermarkOffsetY}cqh`;
     updateWatermarkGeometry();
   }
   async function measureWatermark(blob) {
@@ -203,7 +204,7 @@
   }
   async function loadImage(blob) {
     const url = URL.createObjectURL(blob); const img = new Image();
-    try { img.src = url; await img.decode(); return img; }
+    try { img.src = url; await window.TelaoCompat.decodeImage(img); return img; }
     finally { URL.revokeObjectURL(url); }
   }
   async function optimize(blob, watermark = false) {
@@ -307,14 +308,14 @@
         const cell=document.createElement('div'); cell.className='photo-cell';
         const ribbon=document.createElement('div'); ribbon.className='ribbon'+(row%2?' reverse':'');
         const pair=spec.indices.slice(row*2,row*2+2);
-        for (const index of [...pair,...pair]) { const img=makeImage(photos[index].url,''); ribbon.append(img); loads.push(img.decode().catch(()=>{})); }
+        for (const index of [...pair,...pair]) { const img=makeImage(photos[index].url,''); ribbon.append(img); loads.push(window.TelaoCompat.decodeImage(img).catch(()=>{})); }
         cell.append(ribbon);scene.append(cell);
       }
     } else {
       for (const index of spec.indices) {
         const cell=document.createElement('div');cell.className='photo-cell';
         const background=makeImage(photos[index].url,'photo-backdrop'); const foreground=makeImage(photos[index].url,'photo-main');
-        cell.append(background,foreground);scene.append(cell);loads.push(foreground.decode().catch(()=>{}));
+        cell.append(background,foreground);scene.append(cell);loads.push(window.TelaoCompat.decodeImage(foreground).catch(()=>{}));
       }
     }
     await Promise.all(loads);
@@ -464,7 +465,7 @@
   if(cloudMode) {
     syncConfig();enabled();
     window.Telao={
-      getConfig:()=>structuredClone(config),
+      getConfig:()=>JSON.parse(JSON.stringify(config)),
       setConfig(value){config={...configDefaults,...value};config.modes=availableModes.filter(mode=>config.modes.includes(mode));if(!config.modes.length)config.modes=[...availableModes];syncConfig();},
       async setAlbum(items){
         const old=photos;photos=items.map(p=>({...p,url:URL.createObjectURL(p.blob)}));

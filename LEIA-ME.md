@@ -65,3 +65,9 @@ O Hosting publica apenas os arquivos estáticos. A pasta `worker/`, arquivos de 
 ## Verificações
 
 Os testes do Worker cobrem álbum público, exclusões, bloqueio de arquivos externos à apresentação, acesso de administrador, sessões expiradas, CORS, métodos HTTP e proteção da chave nas respostas. A validação final também usa o Worker publicado e o navegador, pois o ambiente de Workers tem diferenças em relação ao Node.js.
+
+## Navegadores de controladores LED
+
+Abra https://bracis-telao.web.app/diagnostico no navegador do próprio controlador. A página testa módulos do player, leitura real da configuração, álbum público, download de uma foto, animação CSS, canvas e cache local. O relatório não é enviado automaticamente. Um resultado aprovado não substitui um teste de pelo menos 30 minutos na exibição real, com reinício do equipamento. Sem conhecer o modelo e a versão do navegador, não há garantia universal de compatibilidade.
+
+O player mantém o movimento escolhido mesmo quando o sistema informa movimento reduzido, e usa alternativas para `Image.decode`, `AbortSignal.timeout`, `structuredClone`, unidades de container, `aspect-ratio` e altura dinâmica da janela. Ainda requer JavaScript moderno, módulos, fetch, canvas e CSS Grid.
