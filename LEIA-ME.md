@@ -25,6 +25,8 @@ O servidor consulta somente a pasta publicada. A prévia de outra pasta exige au
 
 A apresentação prepara lotes de até 60 imagens e percorre os demais automaticamente. As fotos são otimizadas no navegador com lado maior de até 2016 pixels. O cache local guarda até 300 imagens otimizadas. Fotos já preparadas continuam passando durante falhas temporárias de conexão; a primeira carga e novas fotos precisam de internet. Depois de recarregar, a recuperação do cache é uma ajuda, não uma garantia de funcionamento completamente offline.
 
+Para reduzir o tráfego, o servidor tenta obter do Drive uma versão de exibição com 2016 pixels no lado maior. O formato atual do endereço de prévia do Google é ajustado para esse tamanho; se o formato mudar, a prévia expirar ou falhar, o servidor usa o original. A marca d’água sempre mantém o arquivo original para preservar a transparência. URLs temporárias das prévias ficam somente no servidor.
+
 A pasta aceita até 5.000 arquivos diretos, sem buscar subpastas. Para coleções maiores, separe por dia/evento. ZIPs no Drive não são extraídos pelo servidor.
 
 ## Hospedagem sem plano pago

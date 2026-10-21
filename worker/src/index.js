@@ -2,6 +2,18 @@ import {importX509,jwtVerify} from 'jose';
 const ID=/^[a-zA-Z0-9_-]{10,200}$/;
 const PHOTO=/\.(jpe?g|png|webp|avif)$/i;
 const MARK=/^watermark\.(jpe?g|png|webp|avif)$/i;
+const publicFile=({thumbnailLink,...file})=>file;
+function displayPreview(file){
+  if(MARK.test(file.name)||!file.thumbnailLink)return null;
+  try {
+    const url=new URL(file.thumbnailLink);
+    if(url.protocol!=='https:'||!url.hostname.endsWith('.googleusercontent.com')||url.username||url.password||url.port)return null;
+    // Drive currently returns a Google image URL ending in =s220. Request the
+    // same 2016px limit used by the player; unknown URL formats use the original.
+    if(!/=s\d+$/.test(url.pathname))return null;
+    url.pathname=url.pathname.replace(/=s\d+$/,'=s2016');return url;
+  }catch{return null;}
+}
 class HttpError extends Error {constructor(status,message){super(message);this.status=status;}}
 const fail=(status,message)=>{throw new HttpError(status,message);};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
@@ -9,7 +21,7 @@ const json=(value,status=200)=>new Response(JSON.stringify(value),{status,header
 export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null,onError=null}={}) {
   let publishedCache=null,certificates=null;
   const manifests=new Map();
-  async function timedFetch(url,options={}){return fetcher(url,{...options,signal:AbortSignal.timeout(30000)});}
+  async function timedFetch(url,options={},timeout=30000){return fetcher(url,{...options,signal:AbortSignal.timeout(timeout)});}
   async function verifyAdmin(request,env){
     const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];
     if(!token||token.length>10000)fail(401,'Entre no painel para carregar outra pasta.');
@@ -72,7 +84,7 @@ export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null
     if(cached?.until>now())return cached.value;
     const files=[];let pageToken='',pages=0;
     do {
-      const response=await drive('files',{q:`'${source.folderId}' in parents and trashed = false`,pageSize:'1000',fields:'nextPageToken,files(id,name,mimeType,modifiedTime,size,resourceKey)',orderBy:'name',...(pageToken?{pageToken}:{})},{id:source.folderId,resourceKey:source.resourceKey},env);
+      const response=await drive('files',{q:`'${source.folderId}' in parents and trashed = false`,pageSize:'1000',fields:'nextPageToken,files(id,name,mimeType,modifiedTime,size,resourceKey,thumbnailLink)',orderBy:'name',...(pageToken?{pageToken}:{})},{id:source.folderId,resourceKey:source.resourceKey},env);
       const page=await response.json();files.push(...(page.files||[]));pageToken=page.nextPageToken;
       if(++pages>5||files.length>5000)fail(422,'Divida as fotos em uma pasta menor.');
     }while(pageToken);
@@ -96,15 +108,23 @@ export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null
       if(url.pathname!=='/album'&&!/^\/image\/[a-zA-Z0-9_-]{10,200}$/.test(url.pathname))fail(404,'Endereço não encontrado.');
       const source=await sourceFor(request,url,env),listing=await manifest(source,env);
       const photos=listing.photos.filter(file=>!source.excludedIds.includes(file.id));
-      if(url.pathname==='/album')return respond(json({...listing,photos}));
+      if(url.pathname==='/album')return respond(json({...listing,photos:photos.map(publicFile),watermark:listing.watermark?publicFile(listing.watermark):null}));
       const id=url.pathname.split('/')[2],file=[...photos,...(listing.watermark?[listing.watermark]:[])].find(file=>file.id===id);
       if(!file)fail(404,'Esta imagem não faz parte da apresentação.');
       if(Number(file.size)>80*1024*1024)fail(413,'Imagem maior que 80 MB.');
-      const cacheKey=new Request(`${url.origin}/cached-image/${encodeURIComponent(id)}?v=${encodeURIComponent(file.modifiedTime||'')}`);
+      const cacheKey=new Request(`${url.origin}/cached-display-v2/${encodeURIComponent(id)}?v=${encodeURIComponent(file.modifiedTime||'')}`);
       const cache=globalThis.caches?.default;
       let response=cache?await cache.match(cacheKey):null;
       if(!response){
-        const upstream=await drive(`files/${encodeURIComponent(id)}`,{alt:'media'},file,env);
+        let upstream;const preview=displayPreview(file);
+        if(preview){
+          try {
+            const candidate=await timedFetch(preview,{redirect:'manual'},12000);
+            if(candidate.ok&&['image/jpeg','image/png','image/webp','image/avif'].includes((candidate.headers.get('Content-Type')||'').split(';')[0]))upstream=candidate;
+            else await candidate.body?.cancel();
+          }catch{} // A missing or expired Drive preview falls back to the original.
+        }
+        if(!upstream)upstream=await drive(`files/${encodeURIComponent(id)}`,{alt:'media'},file,env);
         const type=(upstream.headers.get('Content-Type')||'').split(';')[0];
         if(!['image/jpeg','image/png','image/webp','image/avif'].includes(type))fail(415,'Formato de imagem não compatível.');
         if(Number(upstream.headers.get('Content-Length'))>80*1024*1024)fail(413,'Imagem maior que 80 MB.');
