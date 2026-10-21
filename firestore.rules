@@ -10,8 +10,9 @@ service cloud.firestore {
     function numberBetween(value, low, high) { return value is number && value >= low && value <= high; }
     function settings(s) {
       return s is map && s.keys().hasAll(['modes','duration','shuffle','watermarkPosition','watermarkOpacity','watermarkOffsetX','watermarkOffsetY','watermarkLayerVersion','watermarkSize','watermarkFade','fadeColor','fadeOpacity','fadeSize','fadePosition','screenWidth','screenHeight','fitScreen'])
-        && s.keys().size() == 17
-        && s.modes is list && s.modes.size() >= 1 && s.modes.size() <= 5 && s.modes.toSet().hasOnly(['single','triple','quad','motion','pan'])
+        && s.keys().hasOnly(['modes','duration','motionSpeed','shuffle','watermarkPosition','watermarkOpacity','watermarkOffsetX','watermarkOffsetY','watermarkLayerVersion','watermarkSize','watermarkFade','fadeColor','fadeOpacity','fadeSize','fadePosition','screenWidth','screenHeight','fitScreen'])
+        && (!('motionSpeed' in s) || s.motionSpeed in [0.25,0.5,1])
+        && s.modes is list && s.modes.size() >= 1 && s.modes.size() <= 5 && s.modes.toSet().hasOnly(['single','mixed','triple','quad','motion','pan'])
         && s.duration in [8,12,18,25] && s.shuffle is bool
         && s.watermarkPosition in ['bottom-right','bottom-left','top-right','center','overlay']
         && numberBetween(s.watermarkOpacity,10,100) && numberBetween(s.watermarkSize,10,90)

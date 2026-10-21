@@ -23,16 +23,19 @@ function renderDirectory(){
   const filtered=active.filter(file=>file.name.toLocaleLowerCase().includes(query));
   const totalPages=Math.max(1,Math.ceil(filtered.length/100));directoryPage=Math.min(directoryPage,totalPages-1);
   $('albumCount').textContent=`${active.length} fotos`;$('photoCount').textContent=`${active.length} FOTOS`;$('albumEmpty').hidden=!!active.length;
+  const orientations={portrait:0,landscape:0,square:0,unknown:0};active.forEach(file=>orientations[window.TelaoTiming.orientation(file)]++);
+  $('orientationInfo').textContent=`${orientations.portrait} retratos · ${orientations.landscape} paisagens · ${orientations.square} quadradas${orientations.unknown?` · ${orientations.unknown} a identificar`:''}`;
   $('directoryPage').textContent=`${directoryPage+1} / ${totalPages}`;$('directoryPrev').disabled=directoryPage===0;$('directoryNext').disabled=directoryPage===totalPages-1;
   const fragment=document.createDocumentFragment();
   for(const file of filtered.slice(directoryPage*100,directoryPage*100+100)){
     const row=document.createElement('li'),view=document.createElement('button'),name=document.createElement('span'),remove=document.createElement('button');
     name.className='photo-name';name.textContent=file.name;view.className='text-button';view.textContent='Ver';
+    const orientation=document.createElement('small');orientation.className='photo-orientation';orientation.textContent={portrait:'Retrato',landscape:'Paisagem',square:'Quadrada',unknown:'A identificar'}[window.TelaoTiming.orientation(file)];
     view.addEventListener('click',async()=>{
       view.disabled=true;try{const photo=await loadFile({...file,source});const url=URL.createObjectURL(photo.blob),dialog=document.createElement('dialog'),image=new Image(),close=document.createElement('button');image.src=url;image.alt=file.name;close.textContent='Fechar';close.className='secondary';dialog.className='photo-dialog';dialog.append(image,close);document.body.append(dialog);close.onclick=()=>dialog.close();dialog.addEventListener('close',()=>{URL.revokeObjectURL(url);dialog.remove();},{once:true});dialog.showModal();}catch(error){player.status(error.message,true);}finally{view.disabled=false;}
     });
     remove.className='text-button photo-remove';remove.textContent='Excluir';remove.setAttribute('aria-label',`Excluir ${file.name}`);remove.onclick=()=>window.dispatchEvent(new CustomEvent('telao:exclude',{detail:{id:file.id}}));
-    row.append(view,name,remove);fragment.append(row);
+    row.append(view,name,orientation,remove);fragment.append(row);
   }
   $('photoList').replaceChildren(fragment);
 }

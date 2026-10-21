@@ -3,15 +3,16 @@
   const $ = id => document.getElementById(id);
   const cloudMode = document.body.dataset.cloud;
   const cloudEvent = (type, detail) => window.dispatchEvent(new CustomEvent(type, {detail}));
-  const modeNames = { single:'1 FOTO · ALTURA INTEIRA', triple:'3 FOTOS', quad:'4 FOTOS', motion:'MOTION · FAIXAS LATERAIS', pan:'PANORAMA · MOVIMENTO' };
-  const availableModes = ['single','triple','quad','motion','pan'];
-  const configDefaults = { modes:availableModes, duration:12, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false };
+  const modeNames = { single:'RETRATO · MOVIMENTO', mixed:'RETRATO + 2 PAISAGENS', motion:'MOTION · FAIXAS LATERAIS', pan:'PANORAMA · MOVIMENTO' };
+  const availableModes = ['single','mixed','motion','pan'];
+  const configDefaults = { modes:availableModes, duration:12, motionSpeed:0.5, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false };
   let config = { ...configDefaults }, photos = [], mark = null, markURL = null, db = null;
   let history = [], historyIndex = -1, bag = [], cursor = 0, sequenceCursor = 0, playing = true, busy = false, sceneVersion = 0;
   let timer, sceneStarted = 0, remaining = 12000, currentScene = null, uiTimer, wakeLock = null;
   let nextPhotoId = 0, removedPhoto = null, persistedPhotoIds = new Set();
   const dirtyPhotos = new Set();
   let watermarkBounds=null,watermarkDrag=null,watermarkFrame=null;
+  const completedPhotos=new Set(),selectedPhotos=new Set();
   const displayName = name => name.replace(/\\/g, '/').split('/').pop();
   const isMark = name => /^watermark\.(png|jpe?g|webp|avif)$/i.test(displayName(name));
   const isPhoto = name => /\.(jpe?g|png|webp|avif)$/i.test(name);
@@ -23,7 +24,7 @@
     $('zipInput').disabled = busy; $('watermarkInput').disabled = busy;
     $('photoCount').textContent = loaded ? `${photos.length} FOTO${photos.length === 1 ? '' : 'S'}` : 'SEM ÁLBUM';
     $('dropTitle').textContent = loaded ? 'Adicionar fotos ou ZIP' : 'Solte fotos ou um ZIP aqui';
-    $('albumManager').setAttribute('aria-busy',String(busy));
+    $('albumManager').setAttribute('aria-busy',String(busy));updateCycleEstimate();
     $('undoPhoto').disabled=busy;
     document.querySelectorAll('.photo-remove').forEach(button=>button.disabled=busy);
   }
@@ -44,7 +45,7 @@
   async function restartPlayback(shouldPlay=playing) {
     clearTimeout(timer);sceneVersion++;
     if(!photos.length){$('scenes').textContent='';currentScene=null;}
-    history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;
+    history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;completedPhotos.clear();selectedPhotos.clear();
     playing=shouldPlay;$('stage').classList.toggle('paused',!playing);
     $('pause').textContent=playing?'Ⅱ':'▶';$('pause').setAttribute('aria-label',playing?'Pausar apresentação':'Retomar apresentação');
     $('emptyStage').hidden=photos.length>0;
@@ -125,7 +126,7 @@
     $('opacityValue').textContent = `${config.watermarkOpacity}%`; $('sizeValue').textContent = `${config.watermarkSize}%`;
     document.body.classList.toggle('fill-output', config.fitScreen);
     const image = $('watermark'); image.dataset.position = config.watermarkPosition; image.style.opacity = config.watermarkOpacity / 100; image.style.width = config.watermarkSize + '%';
-    renderWatermarkFade();queueWatermarkGeometry();
+    renderWatermarkFade();queueWatermarkGeometry();updateCycleEstimate();
   }
   function renderWatermarkFade() {
     const layer=$('watermarkFadeLayer');
@@ -151,7 +152,7 @@
   }
   function queueWatermarkGeometry() {
     if(watermarkFrame!==null)cancelAnimationFrame(watermarkFrame);
-    watermarkFrame=requestAnimationFrame(()=>{watermarkFrame=null;updateWatermarkGeometry();});
+    watermarkFrame=requestAnimationFrame(()=>{watermarkFrame=null;updateWatermarkGeometry();layoutPanorama(currentScene);});
   }
   function updateWatermarkGeometry() {
     const image=$('watermark'),target=$('watermarkDragTarget'),stage=$('stage');
@@ -218,9 +219,9 @@
     if (!watermark) { context.fillStyle = '#111'; context.fillRect(0,0,canvas.width,canvas.height); }
     context.drawImage(img,0,0,canvas.width,canvas.height);
     const result = await new Promise(resolve => canvas.toBlob(resolve,watermark ? 'image/png' : 'image/jpeg',.86));
-    canvas.width = canvas.height = 1;
+    const width=canvas.width,height=canvas.height;canvas.width = canvas.height = 1;
     if (!result) throw Error('Falha ao otimizar imagem.');
-    return result;
+    return {blob:result,width,height};
   }
   async function importFiles(files) {
     if(cloudMode)return;
@@ -252,16 +253,16 @@
         try {
           if(entry.size>80*1024*1024)throw Error('A imagem excede o limite de 80 MB.');
           const blob=await entry.read();
-          if(isMark(name))incomingMark={name:'watermark.png',blob:await optimize(blob,true)};
+          if(isMark(name))incomingMark={name:'watermark.png',...await optimize(blob,true)};
           else {
             const sourceHash=await fingerprint(blob);
             if(sourceHash&&seen.has(sourceHash)){duplicates++;continue;}
             if(photos.length+prepared.length>=600)throw Error('O álbum chegou a 600 fotos. Exclua fotos para adicionar outras.');
-            const optimized=await optimize(blob),contentHash=await fingerprint(optimized);
+            const result=await optimize(blob),optimized=result.blob,contentHash=await fingerprint(optimized);
             if(contentHash&&seen.has(contentHash)){duplicates++;if(sourceHash)seen.add(sourceHash);continue;}
             if(sourceHash)seen.add(sourceHash);if(contentHash)seen.add(contentHash);
             totalBytes+=blob.size;
-            prepared.push({id:nextPhotoId++,name:name.replace(/\.[^.]+$/,'.jpg'),blob:optimized,sourceHash,contentHash});
+            prepared.push({id:nextPhotoId++,name:name.replace(/\.[^.]+$/,'.jpg'),blob:optimized,width:result.width,height:result.height,sourceHash,contentHash});
           }
         }catch(error){rejected++;if(warnings.length<4)warnings.push(`${name}: ${error.message}`);}
         finally{$('progress').value=Math.round((i+1)/Math.max(1,entries.length)*100);await new Promise(resolve=>setTimeout(resolve,0));}
@@ -285,49 +286,72 @@
     }catch(error){status(error.message,true);if(wasPlaying&&!playing&&photos.length)togglePause();}
     finally{busy=false;$('importProgress').hidden=true;$('zipInput').value='';enabled();}
   }
-  function takePhoto() {
-    if (!config.shuffle) return cursor++ % photos.length;
-    if (!bag.length) {
-      bag = photos.map((_,i) => i);
-      for (let i=bag.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; }
-    }
-    return bag.pop();
+  function takePhoto(role,eligible) {
+    const timing=window.TelaoTiming;
+    let candidates=eligible.filter(index=>role==='any'||timing.orientation(photos[index])===role);
+    const unseen=candidates.filter(index=>!selectedPhotos.has(index));
+    if(unseen.length)candidates=unseen;
+    if(role==='any'&&unseen.length){const counts={landscape:0,portrait:0,square:0,unknown:0};unseen.forEach(index=>counts[timing.orientation(photos[index])]++);const largest=timing.dominant(counts);candidates=unseen.filter(index=>timing.orientation(photos[index])===largest);}
+    const index=candidates[config.shuffle?Math.floor(Math.random()*candidates.length):0];selectedPhotos.add(index);return index;
   }
   function makeSpec() {
-    const mode = config.modes[sequenceCursor++ % config.modes.length];
-    const count = {single:1,triple:3,quad:4,motion:6,pan:1}[mode];
-    return { mode, indices:Array.from({length:count},takePhoto) };
+    const timing=window.TelaoTiming,modes=timing.available(photos,config.modes),eligible=timing.eligible(photos,config.modes);
+    if(eligible.every(index=>selectedPhotos.has(index)))selectedPhotos.clear();
+    const remaining={portrait:0,landscape:0,square:0,unknown:0};eligible.filter(index=>!selectedPhotos.has(index)).forEach(index=>remaining[timing.orientation(photos[index])]++);
+    const next=timing.nextMode(modes,sequenceCursor,remaining);sequenceCursor=next.cursor;
+    return {mode:next.mode,indices:timing.modeRoles(next.mode).map(role=>takePhoto(role,eligible))};
   }
-  function makeImage(url, className) { const img = new Image(); img.alt = ''; img.src = url; img.className = className; img.draggable = false; return img; }
+  function updateCycleEstimate(){
+    const output=$('cycleEstimate');if(!output)return;
+    const input=photos.length?photos:60,estimate=window.TelaoTiming.cycle(input,config);
+    output.textContent=`${photos.length?'Ciclo estimado':'Referência'} de ${estimate.photos} fotos: ${window.TelaoTiming.format(estimate.seconds)}. No modo lento, as cenas duram mais para completar o deslocamento.`;
+  }
+  async function identifyPhotos(items){
+    for(const photo of items){if(photo.width&&photo.height)continue;const image=makeImage(photo.url,'');await window.TelaoCompat.decodeImage(image);photo.width=image.naturalWidth;photo.height=image.naturalHeight;}
+  }
+  function layoutPanorama(scene){
+    if(!scene)return;
+    for(const image of scene.querySelectorAll('.photo-main')){
+      const cell=image.closest('.photo-cell'),tile=image.parentElement.classList.contains('ribbon-tile')?image.parentElement:null;
+      if(!image.naturalWidth||!cell.clientWidth||!cell.clientHeight)continue;
+      const width=tile?Math.max(cell.clientWidth,cell.clientHeight*image.naturalWidth/image.naturalHeight):cell.clientWidth,height=cell.clientHeight;
+      if(tile)tile.style.width=`${width}px`;
+      const geometry=window.TelaoTiming.cover(image.naturalWidth,image.naturalHeight,width,height);
+      image.style.width=`${geometry.width}px`;image.style.height=`${geometry.height}px`;
+      image.style.setProperty('--pan-start-x',`${geometry.startX}px`);image.style.setProperty('--pan-start-y',`${geometry.startY}px`);
+      image.style.setProperty('--pan-end-x',`${geometry.endX}px`);image.style.setProperty('--pan-end-y',`${geometry.endY}px`);
+    }
+  }
+  function makeImage(url, className) { const img = new Image(); img.alt = ''; img.decoding='async'; img.src = url; img.className = className; img.draggable = false; return img; }
   async function showScene(spec) {
     const version = ++sceneVersion; clearTimeout(timer);
-    const scene = document.createElement('div'); scene.className = `scene ${spec.mode}`; scene.style.setProperty('--scene-duration',`${config.duration}s`);
+    const scene = document.createElement('div'); scene.className = `scene ${spec.mode}`; scene.style.setProperty('--scene-duration',`${window.TelaoTiming.sceneSeconds(spec.mode,config)}s`);
     const loads = [];
     if (spec.mode === 'motion') {
       for (let row=0;row<3;row++) {
         const cell=document.createElement('div'); cell.className='photo-cell';
         const ribbon=document.createElement('div'); ribbon.className='ribbon'+(row%2?' reverse':'');
         const pair=spec.indices.slice(row*2,row*2+2);
-        for (const index of [...pair,...pair]) { const img=makeImage(photos[index].url,''); ribbon.append(img); loads.push(window.TelaoCompat.decodeImage(img).catch(()=>{})); }
+        for (const index of [...pair,...pair]) { const tile=document.createElement('div');tile.className='ribbon-tile';const img=makeImage(photos[index].url,'photo-main');tile.append(img);ribbon.append(tile);loads.push(window.TelaoCompat.decodeImage(img).catch(()=>{})); }
         cell.append(ribbon);scene.append(cell);
       }
     } else {
       for (const index of spec.indices) {
         const cell=document.createElement('div');cell.className='photo-cell';
-        const background=makeImage(photos[index].url,'photo-backdrop'); const foreground=makeImage(photos[index].url,'photo-main');
-        cell.append(background,foreground);scene.append(cell);loads.push(window.TelaoCompat.decodeImage(foreground).catch(()=>{}));
+        const foreground=makeImage(photos[index].url,'photo-main');
+        cell.append(foreground);scene.append(cell);loads.push(window.TelaoCompat.decodeImage(foreground).catch(()=>{}));
       }
     }
     await Promise.all(loads);
     if (version !== sceneVersion) return;
-    const old=currentScene; $('scenes').append(scene); currentScene=scene;
+    const old=currentScene; $('scenes').append(scene); currentScene=scene;layoutPanorama(scene);
     scene.getBoundingClientRect(); scene.classList.add('visible');
     if(old) setTimeout(()=>old.remove(),900);
     $('sceneLabel').textContent=modeNames[spec.mode]; $('sceneCounter').textContent=String(historyIndex+1).padStart(2,'0');
-    remaining=config.duration*1000;
+    remaining=window.TelaoTiming.sceneSeconds(spec.mode,config)*1000;
     if(playing) schedule();
   }
-  function schedule() { clearTimeout(timer);sceneStarted=performance.now();timer=setTimeout(()=>nextScene(),remaining); }
+  function schedule() { clearTimeout(timer);sceneStarted=performance.now();timer=setTimeout(()=>{const shown=history[historyIndex];if(shown)shown.indices.forEach(index=>completedPhotos.add(index));nextScene();},remaining); }
   async function nextScene() {
     if(!photos.length)return;
     if(historyIndex<history.length-1) historyIndex++;
@@ -401,7 +425,7 @@
   $('dropzone').addEventListener('drop',event=>importFiles([...event.dataTransfer.files]));
   $('watermarkInput').addEventListener('change',async event=>{
     const file=event.target.files[0];if(!file||busy)return;
-    try {const blob=await optimize(file,true);await adoptWatermark({name:file.name,blob});const saved=await persistAlbum();status(saved?'Marca d’água aplicada e salva.':'Marca aplicada nesta sessão. Não foi possível salvá-la.',!saved);}catch{status('Não foi possível abrir a marca. Use PNG, JPG ou WEBP.',true);}event.target.value='';
+    try {const result=await optimize(file,true);await adoptWatermark({name:file.name,...result});const saved=await persistAlbum();status(saved?'Marca d’água aplicada e salva.':'Marca aplicada nesta sessão. Não foi possível salvá-la.',!saved);}catch{status('Não foi possível abrir a marca. Use PNG, JPG ou WEBP.',true);}event.target.value='';
   });
   $('removeWatermark').addEventListener('click',async()=>{setWatermark(null);await persistAlbum();});
   document.querySelectorAll('.mode').forEach(button=>button.addEventListener('click',()=>{
@@ -411,7 +435,7 @@
       if(config.modes.length===1) { status('Mantenha pelo menos um tipo de apresentação selecionado.');return; }
       config.modes=config.modes.filter(value=>value!==mode);
     } else config.modes=availableModes.filter(value=>value===mode||config.modes.includes(value));
-    history=[];historyIndex=-1;sequenceCursor=0;syncConfig();saveConfig();nextScene();
+    history=[];historyIndex=-1;sequenceCursor=0;selectedPhotos.clear();syncConfig();saveConfig();nextScene();
     status(config.modes.length===1 ? 'Um tipo de apresentação selecionado.' : `${config.modes.length} tipos selecionados. A apresentação alterna entre eles.`);
   }));
   for(const key of Object.keys(configDefaults)) {
@@ -419,10 +443,10 @@
     el.addEventListener('change',()=>{
       if(el.type==='checkbox')config[key]=el.checked;
       else if(['screenWidth','screenHeight'].includes(key)){if(!el.checkValidity()||!el.value)return;config[key]=Number(el.value);}
-      else if(['duration','watermarkOpacity','watermarkSize','fadeOpacity','fadeSize'].includes(key))config[key]=Number(el.value);
+      else if(['duration','motionSpeed','watermarkOpacity','watermarkSize','fadeOpacity','fadeSize'].includes(key))config[key]=Number(el.value);
       else config[key]=el.value;
       if(key==='watermarkPosition'){config.watermarkOffsetX=0;config.watermarkOffsetY=0;}
-      syncConfig();saveConfig();if(key==='duration'&&photos.length)showScene(history[historyIndex]);if(key==='shuffle')bag=[];
+      syncConfig();saveConfig();if(['duration','motionSpeed'].includes(key)&&photos.length)showScene(history[historyIndex]);if(key==='shuffle')bag=[];
     });
     if(el.type==='range'||el.type==='color')el.addEventListener('input',()=>{config[key]=el.type==='range'?Number(el.value):el.value;syncConfig();});
   }
@@ -451,12 +475,11 @@
         config={...configDefaults,...storedConfig};
         if(!storedConfig.watermarkLayerVersion&&storedConfig.watermarkOpacity===65)config.watermarkOpacity=100;
         config.watermarkLayerVersion=1;
-        const selected=Array.isArray(storedConfig.modes) ? availableModes.filter(mode=>storedConfig.modes.includes(mode)) : availableModes.includes(storedConfig.mode) ? [storedConfig.mode] : availableModes;
-        config.modes=selected.length ? selected : [...availableModes];
+        config.modes=window.TelaoTiming.modes(storedConfig.modes||(storedConfig.mode?[storedConfig.mode]:availableModes));
         delete config.mode;
       }
       syncConfig();saveConfig();if(storedMark){if(!storedMark.bounds)storedMark.bounds=await measureWatermark(storedMark.blob);setWatermark(storedMark);}
-      photos=stored.sort((a,b)=>a.id-b.id).map(p=>({...p,url:URL.createObjectURL(p.blob)}));
+      photos=stored.sort((a,b)=>a.id-b.id).map(p=>({...p,url:URL.createObjectURL(p.blob)}));await identifyPhotos(photos);
       persistedPhotoIds=new Set(photos.map(photo=>photo.id));nextPhotoId=photos.reduce((next,photo)=>Math.max(next,photo.id+1),0);renderPhotoList();
       if(photos.length){$('emptyStage').hidden=true;await nextScene();status(`${photos.length} fotos restauradas deste navegador. Pronto para exibir.`);}else status('As fotos são otimizadas ao importar. Nenhum arquivo é enviado para um servidor.');
     }catch{status('Armazenamento local indisponível. Você pode importar e exibir; salve o ZIP otimizado antes de fechar.',true);syncConfig();}
@@ -466,9 +489,10 @@
     syncConfig();enabled();
     window.Telao={
       getConfig:()=>JSON.parse(JSON.stringify(config)),
-      setConfig(value){config={...configDefaults,...value};config.modes=availableModes.filter(mode=>config.modes.includes(mode));if(!config.modes.length)config.modes=[...availableModes];syncConfig();},
+      getPlaybackProgress:()=>{const eligible=window.TelaoTiming.eligible(photos,config.modes);return {completed:eligible.filter(index=>completedPhotos.has(index)).length,total:eligible.length};},
+      setConfig(value){const previous=`${config.duration}:${config.motionSpeed}:${config.modes}`;config={...configDefaults,...value};config.modes=window.TelaoTiming.modes(config.modes);syncConfig();if(currentScene&&photos.length&&previous!==`${config.duration}:${config.motionSpeed}:${config.modes}`){history=[];historyIndex=-1;sequenceCursor=0;selectedPhotos.clear();nextScene();}},
       async setAlbum(items){
-        const old=photos;photos=items.map(p=>({...p,url:URL.createObjectURL(p.blob)}));
+        const old=photos;photos=items.map(p=>({...p,url:URL.createObjectURL(p.blob)}));await identifyPhotos(photos);
         await restartPlayback();old.forEach(p=>URL.revokeObjectURL(p.url));enabled();
       },
       async setMark(value){if(value&&!value.bounds)value.bounds=await measureWatermark(value.blob);setWatermark(value);syncConfig();},

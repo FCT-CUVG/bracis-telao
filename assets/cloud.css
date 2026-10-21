@@ -22,3 +22,6 @@
 .photo-dialog {max-width:90vw;max-height:90dvh;border:1px solid var(--line);border-radius:6px;padding:14px;}
 .photo-dialog img {display:block;max-width:82vw;max-height:75dvh;object-fit:contain;margin-bottom:12px;}
 .photo-dialog::backdrop {background:#0008;}
+
+.photo-orientation{font-size:10px;color:var(--muted);white-space:nowrap;}
+.frame-meter{position:absolute;z-index:25;left:3%;right:3%;bottom:2%;padding:8px;background:#fffffff0;color:#202124;border:1px solid #aaa;font:11px/1.4 Arial,sans-serif;white-space:pre-line;pointer-events:none;}

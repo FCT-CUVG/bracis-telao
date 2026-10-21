@@ -2,7 +2,11 @@ import {importX509,jwtVerify} from 'jose';
 const ID=/^[a-zA-Z0-9_-]{10,200}$/;
 const PHOTO=/\.(jpe?g|png|webp|avif)$/i;
 const MARK=/^watermark\.(jpe?g|png|webp|avif)$/i;
-const publicFile=({thumbnailLink,...file})=>file;
+const publicFile=({thumbnailLink,imageMediaMetadata,...file})=>{
+  const metadata=imageMediaMetadata||{},rotated=Math.abs(Number(metadata.rotation)||0)%2===1;
+  const width=Number(rotated?metadata.height:metadata.width),height=Number(rotated?metadata.width:metadata.height);
+  return {...file,...(width>0&&height>0?{width,height}:{})};
+};
 function displayPreview(file){
   if(MARK.test(file.name)||!file.thumbnailLink)return null;
   try {
@@ -84,7 +88,7 @@ export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null
     if(cached?.until>now())return cached.value;
     const files=[];let pageToken='',pages=0;
     do {
-      const response=await drive('files',{q:`'${source.folderId}' in parents and trashed = false`,pageSize:'1000',fields:'nextPageToken,files(id,name,mimeType,modifiedTime,size,resourceKey,thumbnailLink)',orderBy:'name',...(pageToken?{pageToken}:{})},{id:source.folderId,resourceKey:source.resourceKey},env);
+      const response=await drive('files',{q:`'${source.folderId}' in parents and trashed = false`,pageSize:'1000',fields:'nextPageToken,files(id,name,mimeType,modifiedTime,size,resourceKey,thumbnailLink,imageMediaMetadata(width,height,rotation))',orderBy:'name',...(pageToken?{pageToken}:{})},{id:source.folderId,resourceKey:source.resourceKey},env);
       const page=await response.json();files.push(...(page.files||[]));pageToken=page.nextPageToken;
       if(++pages>5||files.length>5000)fail(422,'Divida as fotos em uma pasta menor.');
     }while(pageToken);

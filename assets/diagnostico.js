@@ -13,6 +13,7 @@
   function summary(){
     var count=0,failed=0,warnings=0,lines=['Navegador: '+navigator.userAgent,'Janela: '+window.innerWidth+' × '+window.innerHeight,'Tela informada: '+screen.width+' × '+screen.height+'; escala '+(window.devicePixelRatio||1),'Movimento reduzido: '+(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'sim':'não')];
     for(var id in labels){if(results[id]){count++;if(results[id]==='fail')failed++;if(results[id]==='warn')warnings++;}var row=document.getElementById('check-'+id);lines.push(row.getElementsByTagName('strong')[0].textContent+' — '+row.getElementsByTagName('span')[0].textContent);}
+    try{var sample=JSON.parse(localStorage.getItem('bracis-motion-sample'));if(sample)lines.push('Último teste real: '+JSON.stringify(sample));}catch(error){}
     document.getElementById('report').value=lines.join('\n');
     var browser=navigator.userAgent.match(/(Edg|Chrome|Firefox|Version)\/([\d.]+)/);
     document.getElementById('deviceInfo').textContent=(browser?browser[1]+' '+browser[2]:'Navegador não identificado')+' · janela '+window.innerWidth+' × '+window.innerHeight+' · escala '+(window.devicePixelRatio||1);

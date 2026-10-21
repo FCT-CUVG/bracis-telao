@@ -71,3 +71,13 @@ Os testes do Worker cobrem álbum público, exclusões, bloqueio de arquivos ext
 Abra https://bracis-telao.web.app/diagnostico no navegador do próprio controlador. A página testa módulos do player, leitura real da configuração, álbum público, download de uma foto, animação CSS, canvas e cache local. O diagnóstico cabe em um quadro vertical 1:3, com referência de 336 × 1008 pixels, ajustado à janela sem rolagem. O relatório completo fica no botão Copiar relatório e não é enviado automaticamente. Um resultado aprovado não substitui um teste de pelo menos 30 minutos na exibição real, com reinício do equipamento. Sem conhecer o modelo e a versão do navegador, não há garantia universal de compatibilidade.
 
 O player mantém o movimento escolhido mesmo quando o sistema informa movimento reduzido, e usa alternativas para `Image.decode`, `AbortSignal.timeout`, `structuredClone`, unidades de container, `aspect-ratio` e altura dinâmica da janela. Ainda requer JavaScript moderno, módulos, fetch, canvas e CSS Grid.
+
+## Movimento e orientação
+
+Os modos são Retrato (uma foto vertical em movimento), Retrato + 2 (retrato maior acima de duas paisagens), Motion (faixas) e Panorama (paisagem em tela inteira). Os antigos modos empilhados são migrados para Retrato + 2. A orientação usa largura/altura e rotação da câmera do Drive, com verificação pelas dimensões da imagem preparada quando necessário. Apenas largura e altura são expostas; outros metadados de imagem não são publicados pela API.
+
+Todas as áreas usam preenchimento proporcional, com pequeno excesso nas bordas para manter cobertura durante o movimento. O deslocamento horizontal ou vertical usa transformações CSS, sem animar object-position. O padrão é movimento lento (0,5×); Normal e Muito lento também estão disponíveis. A duração efetiva da cena é o tempo base dividido pela velocidade. O painel mostra a estimativa do ciclo conforme as orientações, os modos e o lote preparado. O próximo lote só substitui o atual depois que as fotos compatíveis terminam suas cenas.
+
+Depois das primeiras fotos, o preparo fica em uma fila para reduzir concorrência com a animação. Repetir a busca de arquivos indisponíveis não reinicia um lote que não mudou.
+
+Para medir a apresentação real, abra https://bracis-telao.web.app/?medir=1 e mantenha-a visível por 90 segundos. A amostra mede callbacks requestAnimationFrame, intervalos acima de 50 ms e maior intervalo; não mede quadros efetivamente pintados nem a frequência física do LED. O resultado fica apenas no navegador e entra no relatório do diagnóstico. Para isolar uma composição sem alterar o evento publicado, acrescente &modo=mixed, &modo=single, &modo=motion ou &modo=pan ao endereço de teste. A exibição normal não mostra medição.

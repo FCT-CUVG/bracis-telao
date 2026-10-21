@@ -52,3 +52,8 @@ test('Unavailable, invalid or unrecognized previews fall back to the original',a
 test('Watermark keeps its original PNG and transparency rather than a Google preview',async()=>{
   const {service,calls}=previewSetup();const response=await service.fetch(req('/image/'+mark.id),env);assert.equal(response.headers.get('Content-Type'),'image/png');assert.equal(await response.text(),'transparent-original');assert.equal(calls.filter(call=>call.url.hostname==='lh3.googleusercontent.com').length,0);
 });
+
+test('Public photo geometry applies camera rotation and does not expose other image metadata',async()=>{
+ const service=createService({onError:()=>{},fetcher:async value=>{const url=new URL(value);if(url.hostname==='firestore.googleapis.com')return Response.json({fields});return Response.json({files:[{...photo,imageMediaMetadata:{width:6000,height:4000,rotation:3,location:{latitude:1,longitude:2}}}]});}});
+ const response=await service.fetch(req('/album'),env),body=await response.json();assert.equal(body.photos[0].width,4000);assert.equal(body.photos[0].height,6000);assert.ok(!JSON.stringify(body).includes('latitude'));assert.ok(!JSON.stringify(body).includes('imageMediaMetadata'));
+});

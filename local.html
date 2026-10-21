@@ -5,8 +5,8 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Apresentação de fotos para telão vertical.">
   <title>Fotos para o telão</title>
-  <link rel="stylesheet" href="assets/style.css?v=9">
-  <script src="assets/compat.js?v=1" defer></script><script src="assets/zip.js" defer></script><script src="assets/app.js?v=8" defer></script>
+  <link rel="stylesheet" href="assets/style.css?v=10">
+  <script src="assets/timing.js?v=1" defer></script><script src="assets/compat.js?v=1" defer></script><script src="assets/zip.js" defer></script><script src="assets/app.js?v=8" defer></script>
 </head>
 <body>
   <main class="workspace">
@@ -28,14 +28,14 @@
       <div class="section-heading"><h2>A apresentação</h2><span id="photoCount">SEM ÁLBUM</span></div>
       <p class="selection-hint">Selecione um ou mais tipos. A apresentação alterna entre os marcados.</p>
       <div class="mode-grid" role="group" aria-label="Tipos de apresentação">
-        <button class="mode selected" data-mode="mix" aria-pressed="true"><span class="mode-drawing mix-drawing"><i></i><i></i><i></i></span><strong>Todos</strong><small>Selecionar os 5 tipos</small></button>
-        <button class="mode" data-mode="single" aria-pressed="false"><span class="mode-drawing single-drawing"><i></i></span><strong>1 foto</strong><small>Altura inteira</small></button>
-        <button class="mode" data-mode="triple" aria-pressed="false"><span class="mode-drawing triple-drawing"><i></i><i></i><i></i></span><strong>3 fotos</strong><small>Empilhadas</small></button>
-        <button class="mode" data-mode="quad" aria-pressed="false"><span class="mode-drawing quad-drawing"><i></i><i></i><i></i><i></i></span><strong>4 fotos</strong><small>Empilhadas</small></button>
+        <button class="mode selected" data-mode="mix" aria-pressed="true"><span class="mode-drawing mix-drawing"><i></i><i></i><i></i></span><strong>Todos</strong><small>Selecionar os 4 tipos</small></button>
+        <button class="mode" data-mode="single" aria-pressed="false"><span class="mode-drawing single-drawing"><i></i></span><strong>Retrato</strong><small>1 foto em movimento</small></button>
+        <button class="mode" data-mode="mixed" aria-pressed="false"><span class="mode-drawing mixed-drawing"><i></i><i></i><i></i></span><strong>Retrato + 2</strong><small>2 paisagens abaixo</small></button>
         <button class="mode" data-mode="motion" aria-pressed="false"><span class="mode-drawing motion-drawing"><i></i><i></i><i></i></span><strong>Motion</strong><small>Faixas laterais</small></button>
         <button class="mode" data-mode="pan" aria-pressed="false"><span class="mode-drawing pan-drawing"><i>↔</i></span><strong>Panorama</strong><small>Movimento lateral</small></button>
       </div>
-      <div class="setting-row"><label for="duration">Tempo por cena</label><select id="duration"><option value="8">8 segundos</option><option value="12" selected>12 segundos</option><option value="18">18 segundos</option><option value="25">25 segundos</option></select></div>
+      <div class="setting-row"><label for="duration">Tempo base por cena</label><select id="duration"><option value="8">8 segundos</option><option value="12" selected>12 segundos</option><option value="18">18 segundos</option><option value="25">25 segundos</option></select></div>
+      <div class="setting-row"><label for="motionSpeed">Movimento</label><select id="motionSpeed"><option value="1">Normal</option><option value="0.5" selected>Lento · metade da velocidade</option><option value="0.25">Muito lento · um quarto</option></select></div><p id="cycleEstimate" class="selection-hint" role="status"></p>
       <div class="setting-row"><label for="shuffle">Ordem aleatória</label><input type="checkbox" id="shuffle" class="switch" checked></div>
       <details class="settings"><summary>Marca d’água e ajustes <span>+</span></summary><div class="settings-content">
         <p>Coloque <b>watermark.png</b> no ZIP para aplicar automaticamente. Ou escolha o arquivo abaixo.</p>

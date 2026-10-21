@@ -43,14 +43,19 @@ async function optimize(blob,watermark){
   try {image.src=url;await window.TelaoCompat.decodeImage(image);if(image.naturalWidth*image.naturalHeight>85000000)throw Error('Imagem grande demais.');
     const scale=Math.min(1,2016/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');
     canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    if(typeof requestIdleCallback==='function')await new Promise(resolve=>requestIdleCallback(resolve,{timeout:250}));
     const context=canvas.getContext('2d');context.drawImage(image,0,0,canvas.width,canvas.height);
-    const result=await new Promise(resolve=>canvas.toBlob(resolve,watermark?'image/png':'image/jpeg',.86));if(!result)throw Error('Falha ao preparar foto.');return result;
+    const result=await new Promise(resolve=>canvas.toBlob(resolve,watermark?'image/png':'image/jpeg',.86));if(!result)throw Error('Falha ao preparar foto.');const prepared={blob:result,width:canvas.width,height:canvas.height};canvas.width=canvas.height=1;return prepared;
   }finally{URL.revokeObjectURL(url);}
 }
 export async function loadFile(file,watermark=false){
   const revision=`${file.modifiedTime}:${file.size||''}:${watermark}`;
-  const cached=await cacheGet(file.id);if(cached?.revision===revision)return {...file,blob:cached.blob};
-  const response=await request(`image/${encodeURIComponent(file.id)}`,file.source),blob=await optimize(await response.blob(),watermark);
-  await cachePut({id:file.id,revision,blob,cachedAt:Date.now()});return {...file,blob};
+  const cached=await cacheGet(file.id);if(cached?.revision===revision){
+    let width=cached.width||file.width,height=cached.height||file.height;
+    if(!width||!height){const url=URL.createObjectURL(cached.blob),image=new Image();try{image.src=url;await window.TelaoCompat.decodeImage(image);width=image.naturalWidth;height=image.naturalHeight;await cachePut({...cached,width,height});}finally{URL.revokeObjectURL(url);}}
+    return {...file,blob:cached.blob,width,height};
+  }
+  const response=await request(`image/${encodeURIComponent(file.id)}`,file.source),prepared=await optimize(await response.blob(),watermark);
+  await cachePut({id:file.id,revision,...prepared,cachedAt:Date.now()});return {...file,...prepared};
 }
 export const signature=(source,files)=>JSON.stringify([source.folderId,source.resourceKey,files.photos.map(f=>[f.id,f.modifiedTime,f.size]),files.watermark&&[files.watermark.id,files.watermark.modifiedTime]]);

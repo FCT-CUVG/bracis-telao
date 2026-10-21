@@ -79,7 +79,8 @@ h1 { font-size: 26px; font-weight: 600; line-height: 1.25; margin: 0 0 26px; }
 .selected .mode-drawing { border-color: var(--accent); }
 .selected .mode-drawing i { background: var(--accent); }
 .single-drawing { justify-content: center; }
-.single-drawing i { flex: 0 0 13px; }
+.single-drawing i { flex:1; }
+.mixed-drawing i:first-child { flex:2; }
 .mix-drawing i:first-child { flex: 2; }
 .motion-drawing { transform: skewY(-9deg); }
 .motion-drawing i:nth-child(2) { margin-left: -4px; margin-right: 3px; }
@@ -128,20 +129,16 @@ kbd { font: inherit; border: 1px solid #d0d4da; padding: 1px 4px; border-radius:
 .preview-bottom { padding-top: 12px; }
 .preview-bottom > div { display: flex; align-items: center; gap: 10px; }
 .preview-bottom button { font-size: 18px; }
-.scene { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; overflow: hidden; background: #fff; display: grid; gap: calc(var(--stage-width,192px) * .012); gap: 1.2cqw; opacity: 0; transition: opacity .85s ease; }
+.scene { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; overflow: hidden; background: #fff; display: grid; gap:0; opacity: 0; transition: opacity .85s ease; }
 .scene.visible { opacity: 1; }
 .scene.single, .scene.pan { grid-template-rows: 1fr; }
-.scene.triple, .scene.motion { grid-template-rows: repeat(3,1fr); }
-.scene.quad { grid-template-rows: repeat(4,1fr); }
-.photo-cell { position: relative; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.photo-backdrop { display: none; }
-.photo-main { display: block; position: relative; max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; animation: gentleZoom var(--scene-duration,12s) ease-in-out both; }
-.scene.triple .photo-cell:nth-child(2) .photo-main { animation-name: gentleZoomBack; }
-.scene.quad .photo-main { animation-name: gentleZoomBack; }
-.scene.single .photo-main, .scene.pan .photo-main { object-fit: cover; max-width: none; animation: panorama var(--scene-duration,12s) linear both; }
-.ribbon { display: flex; position: absolute; left: 0; top: 0; height: 100%; width: max-content; gap: 0; animation: ribbonTravel var(--scene-duration,12s) linear infinite; }
-.ribbon.reverse { animation-direction: reverse; }
-.ribbon img { height: 100%; width: auto; min-width: var(--stage-width,192px); min-width: 100cqw; max-width: none; object-fit: cover; display: block; flex-shrink: 0; }
+.scene.motion { grid-template-rows: repeat(3,1fr); }
+.scene.mixed { grid-template-rows: 2fr 1fr 1fr; }
+.photo-cell { position: relative; min-height: 0; overflow: hidden; }
+.photo-main { display:block;position:absolute;left:0;top:0;max-width:none;max-height:none;object-fit:cover;animation:panorama var(--scene-duration,24s) linear both;will-change:transform;backface-visibility:hidden; }
+.ribbon { display:flex;position:absolute;left:0;top:0;height:100%;width:max-content;gap:0;animation:ribbonTravel var(--scene-duration,24s) linear infinite;will-change:transform;backface-visibility:hidden; }
+.ribbon.reverse { animation-direction:reverse; }
+.ribbon-tile { position:relative;height:100%;flex-shrink:0;overflow:hidden; }
 .paused .photo-main, .paused .ribbon { animation-play-state: paused; }
 .watermark-layer { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 2; pointer-events: none; isolation: isolate; }
 .watermark-fade { position: absolute; z-index: 0; left: 0; right: 0; pointer-events: none; }
@@ -170,8 +167,8 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
 .presentation .exit-presentation:focus-visible { opacity: 1; pointer-events: auto; }
 @keyframes gentleZoom { from { transform: scale(1); } to { transform: scale(1.045); } }
 @keyframes gentleZoomBack { from { transform: scale(1.045); } to { transform: scale(1); } }
-@keyframes panorama { from { object-position: 0% 50%; } to { object-position: 100% 50%; } }
-@keyframes ribbonTravel { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes panorama { from { transform:translate3d(var(--pan-start-x,0px),var(--pan-start-y,0px),0); } to { transform:translate3d(var(--pan-end-x,0px),var(--pan-end-y,0px),0); } }
+@keyframes ribbonTravel { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
 /* Photo motion is explicitly chosen in the player, including on kiosk systems
    with reduced motion enabled. Keep only the scene transition shorter. */
 @media (prefers-reduced-motion:reduce) { .scene { transition: opacity .15s; } }
@@ -186,3 +183,5 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
   .presentation .preview-panel { position: fixed; }
   .presentation .stage { height: 100vh; height: min(100vh,calc(100vw * var(--screen-h) / var(--screen-w))); height: min(100dvh,calc(100vw * var(--screen-h) / var(--screen-w))); }
 }
+
+#motionScene .ribbon>img{display:block;height:100%;width:auto;min-width:var(--stage-width,144px);max-width:none;object-fit:cover;flex-shrink:0;}

@@ -11,3 +11,13 @@ function setup({failFirst=false}={}){
 test('Every photo in a large album is reached while limiting each batch to 60',async()=>{const {album,seen,batches,advance}=setup();for(let i=0;i<11;i++){await album.update({folderId:'folder'});advance(361000);}assert.equal(seen.size,626);assert.ok(batches.every(batch=>batch.length<=60));});
 test('One failed image cannot keep playback stuck in the first batch',async()=>{const {album,seen,advance}=setup({failFirst:true});await album.update({folderId:'folder'});for(let i=0;i<6;i++){advance(61000);await album.update({folderId:'folder'});}assert.ok(seen.has('photo-60'));assert.ok(!seen.has('photo-0'));});
 test('Excluded images are not downloaded by the player',async()=>{const {album,requests}=setup();await album.update({folderId:'folder',excludedIds:['photo-0','photo-2']});assert.ok(!requests.includes('photo-0'));assert.ok(!requests.includes('photo-2'));assert.equal(requests.length,60);});
+
+test('A batch is retained until playback confirms that its eligible photos finished',async()=>{
+ const {album,seen,advance}=setup();let progress={completed:0,total:60};album.player.getPlaybackProgress=()=>progress;
+ await album.update({folderId:'folder'});advance(3600000);await album.update({folderId:'folder'});assert.ok(!seen.has('photo-60'));
+ progress={completed:60,total:60};await album.update({folderId:'folder'});assert.ok(seen.has('photo-60'));
+});
+test('Retrying an unchanged partial batch does not restart playback',async()=>{
+ const {album,batches,advance}=setup({failFirst:true});await album.update({folderId:'folder'});const initial=batches.length;
+ advance(61000);await album.update({folderId:'folder'});assert.equal(batches.length,initial);
+});
