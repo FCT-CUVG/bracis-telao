@@ -68,6 +68,6 @@ Os testes do Worker cobrem álbum público, exclusões, bloqueio de arquivos ext
 
 ## Navegadores de controladores LED
 
-Abra https://bracis-telao.web.app/diagnostico no navegador do próprio controlador. A página testa módulos do player, leitura real da configuração, álbum público, download de uma foto, animação CSS, canvas e cache local. O relatório não é enviado automaticamente. Um resultado aprovado não substitui um teste de pelo menos 30 minutos na exibição real, com reinício do equipamento. Sem conhecer o modelo e a versão do navegador, não há garantia universal de compatibilidade.
+Abra https://bracis-telao.web.app/diagnostico no navegador do próprio controlador. A página testa módulos do player, leitura real da configuração, álbum público, download de uma foto, animação CSS, canvas e cache local. O diagnóstico cabe em um quadro vertical 1:3, com referência de 336 × 1008 pixels, ajustado à janela sem rolagem. O relatório completo fica no botão Copiar relatório e não é enviado automaticamente. Um resultado aprovado não substitui um teste de pelo menos 30 minutos na exibição real, com reinício do equipamento. Sem conhecer o modelo e a versão do navegador, não há garantia universal de compatibilidade.
 
 O player mantém o movimento escolhido mesmo quando o sistema informa movimento reduzido, e usa alternativas para `Image.decode`, `AbortSignal.timeout`, `structuredClone`, unidades de container, `aspect-ratio` e altura dinâmica da janela. Ainda requer JavaScript moderno, módulos, fetch, canvas e CSS Grid.

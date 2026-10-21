@@ -1,0 +1,22 @@
+html,body.diagnostic-page{width:100%;height:100%;margin:0;overflow:hidden;background:#fff;color:#202124;font-family:Arial,sans-serif}
+#diagnosticBoard{position:fixed;left:0;top:0;width:336px;height:1008px;padding:18px;box-sizing:border-box;transform-origin:0 0;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+#diagnosticBoard h1{font-size:21px;line-height:25px;margin:0;font-weight:700}
+#diagnosticBoard .intro{font-size:11px;line-height:15px;margin:7px 0 0;color:#555}
+#diagnosticBoard #summary{flex:none;height:68px;box-sizing:border-box;padding:9px;font-size:12px;line-height:16px;border:1px solid #ddd;border-radius:5px;margin:12px 0 5px;overflow:hidden}
+#diagnosticBoard ul{flex:none;list-style:none;padding:0;margin:0}
+#diagnosticBoard li{height:62px;box-sizing:border-box;border-bottom:1px solid #ddd;padding:7px 0;overflow:hidden}
+#diagnosticBoard li strong{display:block;font-size:13px;line-height:17px;font-weight:700}
+#diagnosticBoard li span{display:block;font-size:11px;line-height:14px;max-height:28px;overflow:hidden;color:#555}
+#diagnosticBoard .ok strong{color:#167039}#diagnosticBoard .fail strong{color:#a62525}#diagnosticBoard .warn strong{color:#8a5900}
+#diagnosticBoard .test-area{flex:none;height:177px;display:flex;justify-content:space-between;padding:10px 0 7px;box-sizing:border-box;border-bottom:1px solid #ddd}
+#diagnosticBoard .test-area>div{width:144px}
+#diagnosticBoard .test-area p{font-size:11px;line-height:14px;margin:0 0 5px}
+#diagnosticBoard .stage{width:144px;height:144px;--stage-width:144px;--scene-duration:6s;border:0}
+#diagnosticBoard .sample-box{width:144px;height:144px;background:#f7f7f7;display:flex;align-items:center;justify-content:center}
+#diagnosticBoard img.sample{display:block;max-width:144px;max-height:144px;object-fit:contain}
+#diagnosticBoard footer{flex:none;margin-top:auto}
+#diagnosticBoard .next-step{font-size:11px;line-height:15px;margin:8px 0 6px}
+#diagnosticBoard .device-info{font-size:10px;line-height:13px;color:#555;margin:6px 0 8px;overflow-wrap:anywhere;max-height:39px;overflow:hidden}
+#diagnosticBoard nav{display:flex;gap:5px;justify-content:space-between}
+#diagnosticBoard nav button,#diagnosticBoard nav a{display:flex;align-items:center;justify-content:center;width:97px;min-height:35px;box-sizing:border-box;border:1px solid #cbd0d7;border-radius:4px;background:#fff;color:#245bd5;font:11px/14px Arial,sans-serif;text-decoration:none;padding:5px;text-align:center;margin:0}
+#report{position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0}

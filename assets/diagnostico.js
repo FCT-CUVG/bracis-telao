@@ -2,17 +2,29 @@
   'use strict';
   var labels={core:'Recursos básicos',modules:'Código da apresentação',cloud:'Conexão da configuração',album:'Lista do Drive',photo:'Foto real do álbum',motion:'Movimento das faixas',canvas:'Preparo de imagens',cache:'Cache local'};
   var results={},base='https://bracis-drive.bracis-drive-server.workers.dev';
+  function fit(){
+    var width=window.innerWidth||document.documentElement.clientWidth,height=window.innerHeight||document.documentElement.clientHeight,scale=Math.min(width/336,height/1008);
+    document.getElementById('diagnosticBoard').style.transform='translate('+Math.max(0,(width-336*scale)/2)+'px,'+Math.max(0,(height-1008*scale)/2)+'px) scale('+scale+')';
+  }
+  fit();window.addEventListener('resize',function(){fit();summary();});
   function finish(id,state,detail){
     var row=document.getElementById('check-'+id);row.className=state;row.getElementsByTagName('strong')[0].textContent=labels[id]+': '+(state==='ok'?'OK':state==='warn'?'atenção':'falhou');row.getElementsByTagName('span')[0].textContent=detail;results[id]=state;summary();
   }
   function summary(){
     var count=0,failed=0,warnings=0,lines=['Navegador: '+navigator.userAgent,'Janela: '+window.innerWidth+' × '+window.innerHeight,'Tela informada: '+screen.width+' × '+screen.height+'; escala '+(window.devicePixelRatio||1),'Movimento reduzido: '+(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'sim':'não')];
-    for(var id in labels){if(results[id]){count++;if(results[id]==='fail')failed++;if(results[id]==='warn')warnings++;}lines.push(document.getElementById('check-'+id).textContent);}
+    for(var id in labels){if(results[id]){count++;if(results[id]==='fail')failed++;if(results[id]==='warn')warnings++;}var row=document.getElementById('check-'+id);lines.push(row.getElementsByTagName('strong')[0].textContent+' — '+row.getElementsByTagName('span')[0].textContent);}
     document.getElementById('report').value=lines.join('\n');
-    document.getElementById('summary').textContent=count<8?'Testando… '+count+' de 8 verificações concluídas.':failed?'Há '+failed+' falha(s). Não use este navegador no evento sem resolver e repetir o teste.':warnings?'Testes essenciais concluídos, com '+warnings+' aviso(s). Faça também o teste prolongado na exibição real.':'Testes desta página aprovados. Agora confira a exibição real e faça o teste prolongado no equipamento.';
+    var browser=navigator.userAgent.match(/(Edg|Chrome|Firefox|Version)\/([\d.]+)/);
+    document.getElementById('deviceInfo').textContent=(browser?browser[1]+' '+browser[2]:'Navegador não identificado')+' · janela '+window.innerWidth+' × '+window.innerHeight+' · escala '+(window.devicePixelRatio||1);
+    document.getElementById('summary').textContent=count<8?'Testando… '+count+' de 8 verificações concluídas.':failed?'Há '+failed+' falha(s). Resolva antes de usar este navegador no evento.':warnings?'Testes concluídos com '+warnings+' aviso(s). Confira os detalhes e teste a exibição real.':'8 testes aprovados. Confira as faixas em movimento e teste a exibição real.';
   }
   window.TelaoDiagnostic={finish:finish};
   document.getElementById('repeat').onclick=function(){location.reload();};
+  document.getElementById('copyReport').onclick=function(){
+    var button=this,text=document.getElementById('report');
+    function fallback(){text.focus();text.select();try{button.textContent=document.execCommand('copy')?'Copiado':'Fotografe a tela';}catch(error){button.textContent='Fotografe a tela';}button.focus();}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text.value).then(function(){button.textContent='Copiado';},fallback);else fallback();
+  };
   var missing=[];
   if(!window.Promise)missing.push('Promise');if(!window.fetch)missing.push('conexões modernas');if(!window.Map||!window.Set)missing.push('Map/Set');if(!window.URL||!window.URL.createObjectURL)missing.push('imagens locais');if(!('noModule' in document.createElement('script')))missing.push('módulos JavaScript');
   if(!window.CSS||!CSS.supports||!CSS.supports('display','grid')||!CSS.supports('color','var(--test)'))missing.push('layout da apresentação');
