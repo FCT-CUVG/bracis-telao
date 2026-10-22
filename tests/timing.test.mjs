@@ -52,3 +52,16 @@ test('Framed horizontal layouts use two portraits and two seamless photo ribbons
   const g=timing.cover(w,h,cw,ch);for(const t of [0,.5,1]){const x=g.startX+(g.endX-g.startX)*t,y=g.startY+(g.endY-g.startY)*t;assert.ok(x<=0&&y<=0&&x+g.width>=cw-1e-6&&y+g.height>=ch-1e-6);}
  }
 });
+
+test('Horizontal photo area keeps 16:9 centered within the frame margins at every viewport size',()=>{
+ for(const [w,h] of [[1344,1008],[768,576],[403.5,302.625]])for(const margins of [{x:10,top:10,bottom:10},{x:0,top:0,bottom:0},{x:30,top:35,bottom:35},{x:0,top:35,bottom:0},{x:3,top:14,bottom:4}]){
+  const a=timing.frameArea(w,h,margins);
+  assert.ok(Math.abs(a.width/a.height-16/9)<1e-10);
+  assert.ok(Math.abs(a.left+a.width/2-w/2)<1e-9);
+  assert.ok(Math.abs(a.top+a.height/2-h*(1+(margins.top-margins.bottom)/100)/2)<1e-9);
+  assert.ok(a.left>=w*margins.x/100-1e-9&&a.left+a.width<=w*(1-margins.x/100)+1e-9);
+  assert.ok(a.top>=h*margins.top/100-1e-9&&a.top+a.height<=h*(1-margins.bottom/100)+1e-9);
+ }
+ const area=timing.frameArea(1344,1008,{x:10,top:10,bottom:10});
+ assert.ok(Math.abs(area.width-1075.2)<1e-9);assert.ok(Math.abs(area.height-604.8)<1e-9);
+});
