@@ -220,3 +220,9 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
 .horizontal-output .selected .single-drawing:after{background:var(--accent);}
 .horizontal-output .mixed-drawing{display:grid;grid-template-columns:1fr 2fr;grid-template-rows:1fr 1fr;}
 .horizontal-output .mixed-drawing i:first-child{grid-row:1 / 3;}
+.frame-background-image{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;}
+.horizontal-output.has-custom-background .screen-frame{display:none;}
+.horizontal-output.has-custom-background #scenes{left:var(--frame-margin-x,10%);right:var(--frame-margin-x,10%);top:var(--frame-margin-top,10%);bottom:var(--frame-margin-bottom,10%);border:0;box-shadow:0 3px 16px #0002;}
+.horizontal-output.has-custom-background .stage-empty{background:transparent;}
+.horizontal-output.has-custom-background .stage-empty p{padding:12px;background:#fffffff0;border-radius:5px;}
+.frame-background-settings .settings-content>p{overflow-wrap:anywhere;}

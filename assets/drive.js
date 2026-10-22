@@ -36,6 +36,7 @@ export async function listFolder(source){
   const files=await (await request('album',source)).json();
   files.photos=files.photos.map(file=>({...file,source:{folderId:source.folderId,resourceKey:source.resourceKey||''}}));
   if(files.watermark)files.watermark={...files.watermark,source:{folderId:source.folderId,resourceKey:source.resourceKey||''}};
+  if(files.background)files.background={...files.background,source:{folderId:source.folderId,resourceKey:source.resourceKey||''}};
   return files;
 }
 async function optimize(blob,watermark,targetHeight=1008){
@@ -45,13 +46,13 @@ async function optimize(blob,watermark,targetHeight=1008){
     const size=globalThis.TelaoTiming.imageSize(image.naturalWidth,image.naturalHeight,watermark?2016:targetHeight),canvas=document.createElement('canvas');
     canvas.width=size.width;canvas.height=size.height;
     if(typeof requestIdleCallback==='function')await new Promise(resolve=>requestIdleCallback(resolve,{timeout:250}));
-    const context=canvas.getContext('2d');context.drawImage(image,0,0,canvas.width,canvas.height);
+    const context=canvas.getContext('2d');if(!watermark){context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);}context.drawImage(image,0,0,canvas.width,canvas.height);
     const result=await new Promise(resolve=>canvas.toBlob(resolve,watermark?'image/png':'image/jpeg',.86));if(!result)throw Error('Falha ao preparar foto.');const prepared={blob:result,width:canvas.width,height:canvas.height};canvas.width=canvas.height=1;return prepared;
   }finally{URL.revokeObjectURL(url);}
 }
-export async function loadFile(file,watermark=false,targetHeight=1008){
+export async function loadFile(file,watermark=false,targetHeight=1008,background=false){
   const baseRevision=`${file.modifiedTime}:${file.size||''}:${watermark}`;
-  const revision=watermark?baseRevision:`${baseRevision}:height-${Math.max(100,Math.min(2016,Number(targetHeight)||1008))}-v2`;
+  const revision=watermark?baseRevision:`${baseRevision}:height-${Math.max(100,Math.min(2016,Number(targetHeight)||1008))}-v2${background?':background':''}`;
   const cached=await cacheGet(file.id);if(cached?.revision===revision){
     let width=cached.width||file.width,height=cached.height||file.height;
     if(!width||!height){const url=URL.createObjectURL(cached.blob),image=new Image();try{image.src=url;await window.TelaoCompat.decodeImage(image);width=image.naturalWidth;height=image.naturalHeight;await cachePut({...cached,width,height});}finally{URL.revokeObjectURL(url);}}
@@ -59,7 +60,7 @@ export async function loadFile(file,watermark=false,targetHeight=1008){
   }
   // The previous cached image is already large enough for this smaller profile.
   // Migrate it locally once instead of downloading the album again.
-  const blob=cached?.revision===baseRevision&&!watermark?cached.blob:await (await request(`image/${encodeURIComponent(file.id)}`,file.source)).blob();
+  const blob=cached?.revision===baseRevision&&!watermark&&!background?cached.blob:await (await request(`image/${encodeURIComponent(file.id)}`,file.source)).blob();
   const prepared=await optimize(blob,watermark,targetHeight);
   await cachePut({id:file.id,revision,...prepared,cachedAt:Date.now()});return {...file,...prepared};
 }

@@ -57,3 +57,17 @@ test('Public photo geometry applies camera rotation and does not expose other im
  const service=createService({onError:()=>{},fetcher:async value=>{const url=new URL(value);if(url.hostname==='firestore.googleapis.com')return Response.json({fields});return Response.json({files:[{...photo,imageMediaMetadata:{width:6000,height:4000,rotation:3,location:{latitude:1,longitude:2}}}]});}});
  const response=await service.fetch(req('/album'),env),body=await response.json();assert.equal(body.photos[0].width,4000);assert.equal(body.photos[0].height,6000);assert.ok(!JSON.stringify(body).includes('latitude'));assert.ok(!JSON.stringify(body).includes('imageMediaMetadata'));
 });
+test('Backgrounds are separate from slideshow photos, use their original bytes and hide temporary URLs',async()=>{
+ const background={...mark,id:'background-id-123',name:'fundo.png',thumbnailLink:'https://lh3.googleusercontent.com/private=s220'};const calls=[];
+ const service=createService({onError:()=>{},fetcher:async value=>{const url=new URL(value);calls.push(url);if(url.hostname==='firestore.googleapis.com')return Response.json({fields});if(url.pathname==='/drive/v3/files')return Response.json({files:[photo,mark,background]});if(url.pathname===`/drive/v3/files/${background.id}`)return new Response('original-background',{headers:{'Content-Type':'image/png'}});throw Error('Unexpected request');}});
+ const album=await (await service.fetch(req('/album'),env)).json();assert.deepEqual(album.photos.map(p=>p.id),[photo.id]);assert.equal(album.background.id,background.id);assert.ok(!JSON.stringify(album).includes('thumbnailLink'));
+ const response=await service.fetch(req('/image/'+background.id),env);assert.equal(await response.text(),'original-background');assert.ok(!calls.some(url=>url.hostname==='lh3.googleusercontent.com'));
+});
+test('Worker config reads exclude the uploaded background and all presentation settings',async()=>{
+ const {service,calls}=setup();await service.fetch(req('/album'),env);const read=calls.find(c=>c.url.hostname==='firestore.googleapis.com');assert.deepEqual(read.url.searchParams.getAll('mask.fieldPaths'),['folderId','resourceKey','excludedIds']);
+});
+test('A previously excluded file cannot be exposed by renaming it as a background',async()=>{
+ const background={...excluded,name:'fundo.png'};
+ const service=createService({onError:()=>{},fetcher:async value=>new URL(value).hostname==='firestore.googleapis.com'?Response.json({fields}):Response.json({files:[photo,background]})});
+ assert.equal((await (await service.fetch(req('/album'),env)).json()).background,null);assert.equal((await service.fetch(req('/image/'+background.id),env)).status,404);
+});

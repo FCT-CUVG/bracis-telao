@@ -3,11 +3,11 @@ import {defaultFolder} from './cloud-config.js';
 import {parseFolder,setDriveAuth,loadFile} from './drive.js';
 import {DriveAlbum} from './album.js';
 const $=id=>document.getElementById(id),player=await ready();
-let source={folderId:defaultFolder,resourceKey:'',excludedIds:[]},dirty=false,loaded=false,files=null,stopWatch=null,lastExcluded=null,loadingFolder=false,publishing=false;
+let source={folderId:defaultFolder,resourceKey:'',excludedIds:[]},dirty=false,loaded=false,files=null,stopWatch=null,lastExcluded=null,loadingFolder=false,publishing=false,preparingBackground=false;
 setDriveAuth(()=>auth.currentUser?.getIdToken());
 const album=new DriveAlbum(player,(text,warning)=>player.status(text,warning));
 function changed(){dirty=true;$('publishStatus').textContent='Ajustes ainda não publicados.';updatePublish();}
-function updatePublish(){$('publish').disabled=!authorizedUser||!loaded||loadingFolder||publishing;}
+function updatePublish(){$('publish').disabled=!authorizedUser||!loaded||loadingFolder||publishing||preparingBackground;}
 function folderUI(){const link=`https://drive.google.com/drive/folders/${source.folderId}${source.resourceKey?`?resourcekey=${encodeURIComponent(source.resourceKey)}`:''}`;$('driveFolder').value=link;$('openDrive').href=link;}
 function excludedUI(){
   const container=$('excludedPhotos');container.replaceChildren();
@@ -64,6 +64,7 @@ $('publish').addEventListener('click',async()=>{
 });
 window.addEventListener('telao:change',changed);
 window.addEventListener('telao:format',()=>{if(authorizedUser&&loaded)refresh();});
+window.addEventListener('telao:background-busy',({detail})=>{preparingBackground=detail.busy;updatePublish();});
 window.addEventListener('telao:exclude',async({detail})=>{lastExcluded=detail.id;source.excludedIds=[...new Set([...source.excludedIds,detail.id])];changed();await refresh();$('undoPhoto').hidden=false;});
 $('undoPhoto').addEventListener('click',async()=>{if(!lastExcluded)return;source.excludedIds=source.excludedIds.filter(id=>id!==lastExcluded);lastExcluded=null;changed();await refresh();$('undoPhoto').hidden=true;});
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});

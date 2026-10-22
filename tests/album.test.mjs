@@ -34,3 +34,17 @@ test('Image preparation follows the display format instead of a shared custom re
  album.services.loadFile=async(file,mark,height)=>{heights.push(height);return {...file,blob:new Blob(['foto'])};};
  await album.update({folderId:'folder'});assert.ok(heights.length>0);assert.ok(heights.every(height=>height===1008));
 });
+test('Drive background changes independently without restarting the photo sequence',async()=>{
+ const {album,batches}=setup();let revision='one';const changes=[],originalList=album.services.listFolder;
+ album.player.getPlaybackConfig=()=>({screenWidth:1344,screenHeight:1008,frameBackgroundSource:'drive'});album.player.setBackground=async value=>changes.push(value?.modifiedTime||null);
+ album.services.listFolder=async source=>({...await originalList(source),background:{id:'background',name:'fundo.jpg',modifiedTime:revision}});
+ await album.update({folderId:'folder'});const count=batches.length;revision='two';await album.update({folderId:'folder'});assert.equal(batches.length,count);assert.deepEqual(changes,['one','two']);
+ album.player.getPlaybackConfig=()=>({screenWidth:336,screenHeight:1008});await album.update({folderId:'folder'});assert.deepEqual(changes,['one','two',null]);
+});
+test('An uploaded background skips Drive image loading and can switch back without rebuilding photos',async()=>{
+ const {album,requests,batches}=setup();let source='upload';const originalList=album.services.listFolder;
+ album.player.getPlaybackConfig=()=>({screenWidth:1344,screenHeight:1008,frameBackgroundSource:source});album.player.setBackground=async()=>{};
+ album.services.listFolder=async input=>({...await originalList(input),background:{id:'background',name:'fundo.jpg',modifiedTime:'one'}});
+ await album.update({folderId:'folder'});const count=batches.length;assert.ok(!requests.includes('background'));
+ source='drive';await album.update({folderId:'folder'});assert.ok(requests.includes('background'));assert.equal(batches.length,count);
+});

@@ -89,3 +89,11 @@ Todas as áreas usam preenchimento proporcional, com pequeno excesso nas bordas 
 Depois das primeiras fotos, o preparo fica em uma fila para reduzir concorrência com a animação. Repetir a busca de arquivos indisponíveis não reinicia um lote que não mudou.
 
 Para medir a apresentação real, abra https://bracis-telao.web.app/?medir=1 e mantenha-a visível por 90 segundos. A amostra mede callbacks requestAnimationFrame, intervalos acima de 50 ms e maior intervalo; não mede quadros efetivamente pintados nem a frequência física do LED. O resultado fica apenas no navegador e entra no relatório do diagnóstico. Para isolar uma composição sem alterar o evento publicado, acrescente &modo=mixed, &modo=single, &modo=motion ou &modo=pan ao endereço de teste. A exibição normal não mostra medição.
+
+## Fundo personalizado no formato 4:3
+
+No painel, abra **Fundo da tela maior · 4:3**. Use **Escolher fundo**, ajuste as margens da área central e publique. A imagem é preparada para até 1344 × 1008 e convertida a JPEG com limite de 400.000 caracteres no documento compartilhado; fica pública como parte da apresentação, não é enviada ao GitHub e não exige Storage ou plano pago. O Worker usa máscara de campos ao ler a configuração, sem baixar o fundo enviado em cada consulta ao álbum. O estado usado para preparar fotos também omite essa imagem, evitando cópias grandes a cada arquivo.
+
+Como alternativa, coloque **fundo.jpg**, **fundo.png** ou **background.jpg** na mesma pasta pública do Drive e mantenha **Arquivo no Drive** selecionado. Esses nomes também aceitam JPEG, WEBP e AVIF; `fundo` tem prioridade se houver mais de um arquivo de fundo. O fundo fica fora da sequência de fotos e continua sujeito à validação da pasta e às exclusões publicadas. O vertical não carrega esse fundo.
+
+Com fundo próprio, a moldura e o cabeçalho padrão ficam ocultos, preservando a arte fornecida. As margens laterais (0–30%), superior e inferior (0–35% cada) definem a área das fotos. Use preferencialmente uma arte 4:3; outros formatos são recortados proporcionalmente para preencher o fundo. **Moldura padrão BRACIS** restaura a apresentação sem fundo personalizado.

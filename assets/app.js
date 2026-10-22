@@ -7,13 +7,14 @@
   const cloudEvent = (type, detail) => window.dispatchEvent(new CustomEvent(type, {detail}));
   const modeNames = { single:'RETRATO · MOVIMENTO', mixed:'RETRATO + 2 PAISAGENS', motion:'MOTION · FAIXAS LATERAIS', pan:'PANORAMA · MOVIMENTO' };
   const availableModes = ['single','mixed','motion','pan'];
-  const configDefaults = { modes:availableModes, duration:12, motionSpeed:0.5, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false };
+  const configDefaults = { modes:availableModes, duration:12, motionSpeed:0.5, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false, frameBackgroundSource:'drive',frameBackground:'',frameMarginX:10,frameMarginTop:10,frameMarginBottom:10 };
   let config = { ...configDefaults }, photos = [], mark = null, markURL = null, db = null;
   let history = [], historyIndex = -1, bag = [], cursor = 0, sequenceCursor = 0, cycleStart = 0, playing = true, busy = false, sceneVersion = 0;
   let sceneStarted = 0, remaining = 12000, currentScene = null, uiTimer, wakeLock = null;
   let nextPhotoId = 0, removedPhoto = null, persistedPhotoIds = new Set();
   const dirtyPhotos = new Set();
   let watermarkBounds=null,watermarkDrag=null,watermarkFrame=null;
+  let driveBackground=null,driveBackgroundURL=null;
   const completedPhotos=new Set(),selectedPhotos=new Set();
   const viewConfig=()=>window.TelaoTiming.output(config,outputFormat);
   const isHorizontal=()=>window.TelaoTiming.horizontal(viewConfig());
@@ -32,6 +33,7 @@
     const loaded = photos.length > 0;
     for (const id of ['launch','pause','next','previous','exportAlbum','clearAlbum']) $(id).disabled = !loaded || busy;
     $('zipInput').disabled = busy; $('watermarkInput').disabled = busy;
+    $('frameBackgroundInput').disabled=busy;$('removeFrameBackground').disabled=busy||!config.frameBackground;
     $('photoCount').textContent = loaded ? `${photos.length} FOTO${photos.length === 1 ? '' : 'S'}` : 'SEM ÁLBUM';
     $('dropTitle').textContent = loaded ? 'Adicionar fotos ou ZIP' : 'Solte fotos ou um ZIP aqui';
     $('albumManager').setAttribute('aria-busy',String(busy));updateCycleEstimate();
@@ -146,7 +148,23 @@
     document.body.classList.toggle('fill-output',view.fitScreen);
     const image = $('watermark'); image.dataset.position = config.watermarkPosition; image.style.opacity = config.watermarkOpacity / 100; image.style.width = config.watermarkSize + '%';
     $('frameLogo').style.opacity=config.watermarkOpacity/100;
+    renderFrameBackground();
     renderWatermarkFade();queueWatermarkGeometry();updateCycleEstimate();
+  }
+  function renderFrameBackground(){
+    const image=$('frameBackgroundImage'),source=config.frameBackgroundSource;
+    const url=source==='upload'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(config.frameBackground)&&config.frameBackground.length<=400000?config.frameBackground:source==='drive'?driveBackgroundURL:null;
+    const active=isHorizontal()&&!!url;document.body.classList.toggle('has-custom-background',active);image.hidden=!active;
+    if(active){if(image.getAttribute('src')!==url)image.src=url;}else image.removeAttribute('src');
+    for(const [key,variable] of [['frameMarginX','--frame-margin-x'],['frameMarginTop','--frame-margin-top'],['frameMarginBottom','--frame-margin-bottom']]){document.documentElement.style.setProperty(variable,`${config[key]}%`);$(key+'Value').textContent=`${config[key]}%`;}
+    $('frameBackgroundName').textContent=source==='upload'?(config.frameBackground?'Imagem de fundo escolhida no painel.':'Escolha uma imagem para o fundo.'):source==='drive'?(driveBackground?`Fundo do Drive: ${driveBackground.name}`:'Use fundo.jpg, fundo.png ou background.jpg na mesma pasta do Drive.'):'Moldura padrão BRACIS.';
+    $('removeFrameBackground').disabled=busy||!config.frameBackground;
+  }
+  async function prepareFrameBackground(file){
+    if(!/\.(png|jpe?g|webp|avif)$/i.test(file.name)||(file.type&&!/^image\/(png|jpeg|webp|avif)$/.test(file.type))||file.size>80*1024*1024)throw Error('Use um fundo JPG, PNG, WEBP ou AVIF com até 80 MB.');
+    const image=await loadImage(file);if(image.naturalWidth*image.naturalHeight>85000000)throw Error('Imagem grande demais.');
+    const scale=Math.min(1,1344/image.naturalWidth,1008/image.naturalHeight),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    try{const context=canvas.getContext('2d');context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);for(const quality of [.9,.82,.72,.62,.52,.42]){const data=canvas.toDataURL('image/jpeg',quality);if(data.length<=400000)return data;}throw Error('O fundo ficou muito pesado. Exporte uma versão menor da imagem.');}finally{canvas.width=canvas.height=1;}
   }
   function renderWatermarkFade() {
     const layer=$('watermarkFadeLayer');
@@ -425,6 +443,12 @@
   }
   $('watermark').addEventListener('load',queueWatermarkGeometry);
   $('frameLogo').addEventListener('load',queueWatermarkGeometry);
+  $('frameBackgroundInput').addEventListener('change',async event=>{
+    const file=event.target.files[0];if(!file||busy)return;busy=true;enabled();cloudEvent('telao:background-busy',{busy:true});status('Preparando fundo…');
+    try{config.frameBackground=await prepareFrameBackground(file);config.frameBackgroundSource='upload';outputFormat='horizontal';try{localStorage.setItem('bracis-preview-format',outputFormat);}catch{}syncConfig();await restartPlayback();saveConfig();cloudEvent('telao:format');status(cloudMode?'Fundo pronto na prévia. Clique em Publicar no telão para aplicar.':'Fundo pronto.');}
+    catch(error){status(error.message,true);}finally{busy=false;enabled();event.target.value='';cloudEvent('telao:background-busy',{busy:false});}
+  });
+  $('removeFrameBackground').addEventListener('click',()=>{config.frameBackground='';config.frameBackgroundSource='drive';syncConfig();saveConfig();cloudEvent('telao:format');});
   window.addEventListener('resize',queueWatermarkGeometry);
   if(typeof ResizeObserver!=='undefined'){const observer=new ResizeObserver(queueWatermarkGeometry);observer.observe($('stage'));observer.observe($('stage').parentElement);}
   if($('previewFormat'))$('previewFormat').addEventListener('change',async event=>{outputFormat=event.target.value;try{localStorage.setItem('bracis-preview-format',outputFormat);}catch{}syncConfig();await restartPlayback();cloudEvent('telao:format');});
@@ -478,10 +502,10 @@
     el.addEventListener('change',()=>{
       if(el.type==='checkbox')config[key]=el.checked;
       else if(['screenWidth','screenHeight'].includes(key)){if(!el.checkValidity()||!el.value)return;config[key]=Number(el.value);}
-      else if(['duration','motionSpeed','watermarkOpacity','watermarkSize','fadeOpacity','fadeSize'].includes(key))config[key]=Number(el.value);
+      else if(el.type==='range'||['duration','motionSpeed'].includes(key))config[key]=Number(el.value);
       else config[key]=el.value;
       if(key==='watermarkPosition'){config.watermarkOffsetX=0;config.watermarkOffsetY=0;}
-      syncConfig();saveConfig();if(['duration','motionSpeed'].includes(key)&&photos.length)showScene(history[historyIndex]);if(['screenWidth','screenHeight'].includes(key)&&photos.length)restartPlayback();if(key==='shuffle')bag=[];
+      syncConfig();saveConfig();if(['duration','motionSpeed'].includes(key)&&photos.length)showScene(history[historyIndex]);if(['screenWidth','screenHeight'].includes(key)&&photos.length)restartPlayback();if(key==='shuffle')bag=[];if(key==='frameBackgroundSource')cloudEvent('telao:format');
     });
     if(el.type==='range'||el.type==='color')el.addEventListener('input',()=>{config[key]=el.type==='range'?Number(el.value):el.value;syncConfig();});
   }
@@ -525,7 +549,7 @@
     syncConfig();enabled();
     window.Telao={
       getConfig:()=>JSON.parse(JSON.stringify(config)),
-      getPlaybackConfig:()=>JSON.parse(JSON.stringify(viewConfig())),
+      getPlaybackConfig:()=>{const {frameBackground,...view}=viewConfig();return JSON.parse(JSON.stringify(view));},
       getPlaybackProgress:()=>{const eligible=window.TelaoTiming.eligible(photos,config.modes);return {completed:eligible.filter(index=>completedPhotos.has(index)).length,total:eligible.length};},
       setConfig(value){const previous=playbackKey();config={...configDefaults,...value};config.modes=window.TelaoTiming.modes(config.modes);syncConfig();if(currentScene&&photos.length&&previous!==playbackKey()){history=[];historyIndex=-1;sequenceCursor=0;selectedPhotos.clear();nextScene();}},
       async setAlbum(items){
@@ -533,6 +557,7 @@
         await restartPlayback();old.forEach(p=>URL.revokeObjectURL(p.url));enabled();
       },
       async setMark(value){if(value&&!value.bounds)value.bounds=await measureWatermark(value.blob);setWatermark(value);syncConfig();},
+      async setBackground(value){if(driveBackgroundURL)URL.revokeObjectURL(driveBackgroundURL);driveBackground=value;driveBackgroundURL=value?URL.createObjectURL(value.blob):null;renderFrameBackground();queueWatermarkGeometry();},
       status,
       message(text){$('emptyStage').querySelector('p').textContent=text;},
       refresh:()=>restartPlayback(),

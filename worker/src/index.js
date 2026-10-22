@@ -2,13 +2,14 @@ import {importX509,jwtVerify} from 'jose';
 const ID=/^[a-zA-Z0-9_-]{10,200}$/;
 const PHOTO=/\.(jpe?g|png|webp|avif)$/i;
 const MARK=/^watermark\.(jpe?g|png|webp|avif)$/i;
+const BACKGROUND=/^(fundo|background)\.(jpe?g|png|webp|avif)$/i;
 const publicFile=({thumbnailLink,imageMediaMetadata,...file})=>{
   const metadata=imageMediaMetadata||{},rotated=Math.abs(Number(metadata.rotation)||0)%2===1;
   const width=Number(rotated?metadata.height:metadata.width),height=Number(rotated?metadata.width:metadata.height);
   return {...file,...(width>0&&height>0?{width,height}:{})};
 };
 function displayPreview(file){
-  if(MARK.test(file.name)||!file.thumbnailLink)return null;
+  if(MARK.test(file.name)||BACKGROUND.test(file.name)||!file.thumbnailLink)return null;
   try {
     const url=new URL(file.thumbnailLink);
     if(url.protocol!=='https:'||!url.hostname.endsWith('.googleusercontent.com')||url.username||url.password||url.port)return null;
@@ -54,7 +55,9 @@ export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null
   }
   async function published(env){
     if(publishedCache&&publishedCache.until>now())return publishedCache.value;
-    const response=await timedFetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/events/bracis`);
+    const document=new URL(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/events/bracis`);
+    for(const field of ['folderId','resourceKey','excludedIds'])document.searchParams.append('mask.fieldPaths',field);
+    const response=await timedFetch(document);
     let value;
     if(response.status===404)value={folderId:env.DEFAULT_FOLDER,resourceKey:'',excludedIds:[]};
     else {
@@ -93,8 +96,8 @@ export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null
       if(++pages>5||files.length>5000)fail(422,'Divida as fotos em uma pasta menor.');
     }while(pageToken);
     const images=files.filter(file=>PHOTO.test(file.name)&&file.mimeType?.startsWith('image/'));
-    const photos=images.filter(file=>!MARK.test(file.name));
-    const value={photos,watermark:images.find(file=>MARK.test(file.name))||null,ignored:files.filter(file=>/\.(heic|heif)$/i.test(file.name)).length};
+    const photos=images.filter(file=>!MARK.test(file.name)&&!BACKGROUND.test(file.name));
+    const value={photos,watermark:images.find(file=>MARK.test(file.name))||null,background:images.find(file=>/^fundo\./i.test(file.name))||images.find(file=>BACKGROUND.test(file.name))||null,ignored:files.filter(file=>/\.(heic|heif)$/i.test(file.name)).length};
     // Bound cache growth even if an administrator previews many folders.
     if(manifests.size>=8)manifests.delete(manifests.keys().next().value);
     manifests.set(key,{value,until:now()+45000});return value;
@@ -112,8 +115,9 @@ export function createService({fetcher=fetch,now=()=>Date.now(),verifyToken=null
       if(url.pathname!=='/album'&&!/^\/image\/[a-zA-Z0-9_-]{10,200}$/.test(url.pathname))fail(404,'Endereço não encontrado.');
       const source=await sourceFor(request,url,env),listing=await manifest(source,env);
       const photos=listing.photos.filter(file=>!source.excludedIds.includes(file.id));
-      if(url.pathname==='/album')return respond(json({...listing,photos:photos.map(publicFile),watermark:listing.watermark?publicFile(listing.watermark):null}));
-      const id=url.pathname.split('/')[2],file=[...photos,...(listing.watermark?[listing.watermark]:[])].find(file=>file.id===id);
+      const background=listing.background&&!source.excludedIds.includes(listing.background.id)?listing.background:null;
+      if(url.pathname==='/album')return respond(json({...listing,photos:photos.map(publicFile),watermark:listing.watermark?publicFile(listing.watermark):null,background:background?publicFile(background):null}));
+      const id=url.pathname.split('/')[2],file=[...photos,...(listing.watermark?[listing.watermark]:[]),...(background?[background]:[])].find(file=>file.id===id);
       if(!file)fail(404,'Esta imagem não faz parte da apresentação.');
       if(Number(file.size)>80*1024*1024)fail(413,'Imagem maior que 80 MB.');
       const cacheKey=new Request(`${url.origin}/cached-display-v2/${encodeURIComponent(id)}?v=${encodeURIComponent(file.modifiedTime||'')}`);

@@ -1,7 +1,7 @@
 import {listFolder,loadFile,signature,pruneCache} from './drive.js';
 import './timing.js';
 export class DriveAlbum {
-  constructor(player,onStatus=()=>{},services={}){this.services={listFolder,loadFile,pruneCache,now:()=>Date.now(),...services};this.player=player;this.onStatus=onStatus;this.generation=0;this.loaded=new Map();this.currentSignature='';this.running=false;this.pending=null;this.offset=0;this.rotateAt=0;this.retryAt=Infinity;this.markSignature='';}
+  constructor(player,onStatus=()=>{},services={}){this.services={listFolder,loadFile,pruneCache,now:()=>Date.now(),...services};this.player=player;this.onStatus=onStatus;this.generation=0;this.loaded=new Map();this.currentSignature='';this.running=false;this.pending=null;this.offset=0;this.rotateAt=0;this.retryAt=Infinity;this.markSignature='';this.backgroundSignature='';}
   settings(){return this.player.getPlaybackConfig?this.player.getPlaybackConfig():this.player.getConfig();}
   async update(source,{force=false,onFiles=()=>{}}={}){
     if(this.running){this.pending={source,options:{force,onFiles}};return;}
@@ -11,6 +11,9 @@ export class DriveAlbum {
       try {files=await this.services.listFolder(source);try{localStorage.setItem(cacheKey,JSON.stringify(files));}catch{}}
       catch(error){try{files=JSON.parse(localStorage.getItem(cacheKey));}catch{}if(!files)throw error;this.onStatus('Drive indisponível. Usando as fotos já salvas neste navegador.',true);}
       onFiles(files);
+      const needsBackground=globalThis.TelaoTiming.horizontal(this.settings())&&(this.settings().frameBackgroundSource||'drive')==='drive';
+      const backgroundSignature=needsBackground&&files.background?`${files.background.id}:${files.background.modifiedTime}`:'none';
+      if(this.player.setBackground&&backgroundSignature!==this.backgroundSignature){try{await this.player.setBackground(needsBackground&&files.background?await this.services.loadFile(files.background,false,1008,true):null);this.backgroundSignature=backgroundSignature;}catch{this.onStatus('Não foi possível abrir o fundo do Drive. Tentarei novamente.',true);}}
       const available=files.photos.filter(file=>!(source.excludedIds||[]).includes(file.id));
       const selected=globalThis.TelaoTiming.eligible(available,this.settings().modes);
       const allActive=available.filter((file,index)=>selected.includes(index)||!file.width||!file.height);
@@ -39,7 +42,7 @@ export class DriveAlbum {
       this.loaded=loaded;if(changed)await this.player.setAlbum(active.filter(f=>loaded.has(f.id)).map(f=>loaded.get(f.id)));
       this.player.message(active.length?'Nenhuma foto disponível':'Nenhuma foto selecionada');
       this.currentSignature=nextSignature;this.retryAt=failures?this.services.now()+60000:Infinity;
-      await this.services.pruneCache([...files.photos.map(f=>f.id),...(files.watermark?[files.watermark.id]:[])]);
+      await this.services.pruneCache([...files.photos.map(f=>f.id),...(files.watermark?[files.watermark.id]:[]),...(files.background?[files.background.id]:[])]);
       if(newWindow)this.rotateAt=this.services.now()+Math.max(180000,globalThis.TelaoTiming.cycle(active,this.settings()).seconds*1000);
       onFiles(files);
       this.onStatus(`${allActive.length} fotos na apresentação · ${loaded.size} preparadas neste lote${files.ignored?` · ${files.ignored} HEIC ignorados; use JPG`:''}${failures?` · ${failures} arquivo(s) não carregado(s); tentarei novamente`:''}.`,failures>0);
