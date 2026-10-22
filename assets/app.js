@@ -62,7 +62,7 @@
     $('pause').textContent=playing?'Ⅱ':'▶';$('pause').setAttribute('aria-label',playing?'Pausar apresentação':'Retomar apresentação');
     $('emptyStage').hidden=photos.length>0;
     if(photos.length)await nextScene();
-    else {$('sceneLabel').textContent='TELÃO VERTICAL · 1:3';$('sceneCounter').textContent='—';}
+    else {$('sceneLabel').textContent='AGUARDANDO FOTOS';$('sceneCounter').textContent='—';}
   }
   async function removePhoto(photo) {
     if(busy)return;
@@ -144,6 +144,7 @@
     portraitButton.querySelector('strong').textContent=horizontal?'Retratos':'Retrato';portraitButton.querySelector('small').textContent=horizontal?'2 fotos lado a lado':'1 foto em movimento';
     mixedButton.querySelector('small').textContent=horizontal?'Retrato + 2 à direita':'2 paisagens abaixo';
     $('resolutionLabel').textContent = `${view.screenWidth} × ${view.screenHeight} PX`;
+    if(!photos.length)$('sceneLabel').textContent='AGUARDANDO FOTOS';
     $('opacityValue').textContent = `${config.watermarkOpacity}%`; $('sizeValue').textContent = `${config.watermarkSize}%`;
     document.body.classList.toggle('fill-output',view.fitScreen);
     const image = $('watermark'); image.dataset.position = config.watermarkPosition; image.style.opacity = config.watermarkOpacity / 100; image.style.width = config.watermarkSize + '%';
