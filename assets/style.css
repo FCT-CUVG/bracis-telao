@@ -135,6 +135,7 @@ kbd { font: inherit; border: 1px solid #d0d4da; padding: 1px 4px; border-radius:
 .scene.motion { grid-template-rows: repeat(3,1fr); }
 .scene.mixed { grid-template-rows: 2fr 1fr 1fr; }
 .photo-cell { position: relative; min-height: 0; overflow: hidden; }
+.photo-cell { min-width:0; }
 .photo-main { display:block;position:absolute;left:0;top:0;max-width:none;max-height:none;object-fit:cover;animation:panorama var(--scene-duration,24s) linear both;will-change:transform;backface-visibility:hidden; }
 .ribbon { display:flex;position:absolute;left:0;top:0;height:100%;width:max-content;gap:0;animation:ribbonTravel var(--scene-duration,24s) linear infinite;will-change:transform;backface-visibility:hidden; }
 .ribbon.reverse { animation-direction:reverse; }
@@ -185,3 +186,37 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
 }
 
 #motionScene .ribbon>img{display:block;height:100%;width:auto;min-width:var(--stage-width,144px);max-width:none;object-fit:cover;flex-shrink:0;}
+
+.format-preview{margin-bottom:18px;}
+.format-preview label{display:block;font-size:12px;font-weight:600;margin-bottom:8px;}
+.format-preview select{width:100%;padding:10px;border:1px solid #cbd0d7;border-radius:5px;background:white;color:inherit;font-size:12px;}
+.format-preview p{font-size:11px;color:var(--muted);line-height:1.5;margin:8px 0 0;}
+.presentation .format-preview{display:none;}
+.display-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.display-links a{font-size:11px;}
+.screen-frame{display:none;}
+.horizontal-output .preview-shell{min-height:0;}
+.horizontal-output .screen-frame{display:block;position:absolute;top:0;right:0;bottom:0;left:0;inset:0;z-index:1;border:calc(var(--stage-width,400px)*.006) solid #124c7b;pointer-events:none;}
+.horizontal-output .screen-frame:after{content:'';position:absolute;bottom:0;left:0;right:0;height:calc(var(--stage-width,400px)*.004);background:linear-gradient(to right,#2db96e 0%,#2db96e 20%,#57a6dd 20%,#57a6dd 40%,#f2bf45 40%,#f2bf45 60%,#ec7950 60%,#ec7950 80%,#124c7b 80%);}
+.frame-header{position:absolute;top:2%;left:3%;right:3%;height:9%;display:flex;align-items:center;justify-content:space-between;}
+.frame-logo-viewport{position:relative;width:72%;height:100%;overflow:hidden;}
+.frame-logo-viewport img{position:absolute;max-width:none;max-height:none;}
+#frameBrandFallback{height:100%;display:flex;align-items:center;color:#124c7b;font-size:calc(var(--stage-width,400px)*.045);font-weight:800;letter-spacing:-.04em;}
+.frame-dots{display:flex;align-items:center;gap:calc(var(--stage-width,400px)*.009);}
+.frame-dots i{display:block;width:calc(var(--stage-width,400px)*.011);height:calc(var(--stage-width,400px)*.011);border-radius:50%;background:#2db96e;}
+.frame-dots i:nth-child(2){background:#57a6dd;}.frame-dots i:nth-child(3){background:#f2bf45;}.frame-dots i:nth-child(4){background:#ec7950;}.frame-dots i:nth-child(5){background:#124c7b;}
+.horizontal-output #scenes{top:14%;left:3%;right:3%;bottom:4%;inset:14% 3% 4%;border:1px solid #dce4ec;border-radius:calc(var(--stage-width,400px)*.01);overflow:hidden;}
+.horizontal-output .scene{gap:calc(var(--stage-width,400px)*.005);}
+.horizontal-output .scene.single{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:1fr;}
+.horizontal-output .scene.mixed{grid-template-columns:1fr 2fr;grid-template-rows:1fr 1fr;}
+.horizontal-output .scene.mixed .photo-cell:first-child{grid-column:1;grid-row:1 / 3;}
+.horizontal-output .scene.mixed .photo-cell:nth-child(2){grid-column:2;grid-row:1;}
+.horizontal-output .scene.mixed .photo-cell:nth-child(3){grid-column:2;grid-row:2;}
+.horizontal-output .scene.motion{grid-template-rows:repeat(2,minmax(0,1fr));}
+.horizontal-output .watermark-layer{display:none;}
+.horizontal-output .mode-drawing{width:40px;height:30px;}
+.horizontal-output .single-drawing{flex-direction:row;}
+.horizontal-output .single-drawing:after{content:'';flex:1;background:#a5aab3;border-radius:1px;}
+.horizontal-output .selected .single-drawing:after{background:var(--accent);}
+.horizontal-output .mixed-drawing{display:grid;grid-template-columns:1fr 2fr;grid-template-rows:1fr 1fr;}
+.horizontal-output .mixed-drawing i:first-child{grid-row:1 / 3;}

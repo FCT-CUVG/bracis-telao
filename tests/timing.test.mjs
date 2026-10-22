@@ -33,3 +33,22 @@ test('LED image sizing preserves travel width and reduces decoded pixels without
  const p=timing.imageSize(4000,6000,1008),l=timing.imageSize(6000,4000,1008);
  assert.ok(p.width*p.height/(1344*2016)<.251);assert.ok(l.width*l.height/(2016*1344)<.563);
 });
+test('Each display link fixes its own resolution without changing shared published settings',()=>{
+ const published={screenWidth:1920,screenHeight:1080,fitScreen:true,duration:18,watermarkOffsetX:5,modes:['single','mixed','motion','pan']};
+ const vertical=timing.output(published,'vertical'),horizontal=timing.output(published,'horizontal');
+ assert.equal(vertical.screenWidth,336);assert.equal(vertical.screenHeight,1008);assert.equal(vertical.fitScreen,false);
+ assert.equal(horizontal.screenWidth,1344);assert.equal(horizontal.screenHeight,1008);assert.equal(horizontal.fitScreen,false);
+ assert.equal(horizontal.duration,published.duration);assert.equal(horizontal.watermarkOffsetX,5);
+ assert.equal(published.screenWidth,1920);assert.equal(published.screenHeight,1080);assert.equal(published.fitScreen,true);
+ assert.deepEqual(timing.output(published,'custom'),published);
+});
+test('Framed horizontal layouts use two portraits and two seamless photo ribbons',()=>{
+ const horizontal={screenWidth:1344,screenHeight:1008,modes:['single','mixed','motion','pan'],duration:18,motionSpeed:.5};
+ assert.deepEqual(timing.modeRoles('single',horizontal),['portrait','portrait']);assert.equal(timing.modeRoles('motion',horizontal).length,4);
+ assert.equal(timing.modeRoles('motion',{screenWidth:336,screenHeight:1008}).length,6);
+ const photos=[...Array(6).fill(portrait),...Array(54).fill(landscape)],estimate=timing.cycle(photos,horizontal);
+ assert.equal(estimate.photos,60);assert.ok(estimate.seconds>0&&estimate.seconds<2200);
+ for(const [w,h] of [[6000,4000],[4000,6000]])for(const [cw,ch] of [[1344*.94,1008*.82],[1344*.94/2,1008*.82],[1344*.94/3,1008*.82],[1344*.94*2/3,1008*.82/2]]){
+  const g=timing.cover(w,h,cw,ch);for(const t of [0,.5,1]){const x=g.startX+(g.endX-g.startX)*t,y=g.startY+(g.endY-g.startY)*t;assert.ok(x<=0&&y<=0&&x+g.width>=cw-1e-6&&y+g.height>=ch-1e-6);}
+ }
+});

@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="Apresentação de fotos para telão vertical.">
+  <meta name="description" content="Apresentação de fotos nos formatos vertical e horizontal.">
   <title>Fotos para o telão</title>
-  <link rel="stylesheet" href="assets/style.css?v=10">
-  <script src="assets/timing.js?v=2" defer></script><script src="assets/compat.js?v=2" defer></script><script src="assets/playback.js?v=1" defer></script><script src="assets/zip.js" defer></script><script src="assets/app.js?v=12" defer></script>
-<link rel="stylesheet" href="assets/cloud.css?v=2"><script type="module" src="assets/admin.js?v=1"></script></head>
+  <link rel="stylesheet" href="assets/style.css?v=11">
+  <script src="assets/timing.js?v=3" defer></script><script src="assets/compat.js?v=2" defer></script><script src="assets/playback.js?v=1" defer></script><script src="assets/zip.js" defer></script><script src="assets/app.js?v=13" defer></script>
+<link rel="stylesheet" href="assets/cloud.css?v=2"><script type="module" src="assets/admin.js?v=2"></script></head>
 <body data-cloud="admin">
   <section id="authGate" class="auth-gate"><h1>Painel do telão</h1><p id="authStatus" role="status">Conectando…</p><button id="loginGoogle" class="primary" hidden>Entrar com Google</button></section>
   <main class="workspace" id="adminWorkspace" hidden>
@@ -15,7 +15,7 @@
       <div class="admin-heading"><h1>Painel do telão</h1><button id="logout" class="text-button">Sair</button></div>
       <p class="muted" id="adminIdentity"></p>
       <div class="cloud-source"><label for="driveFolder">Pasta do Google Drive</label><input id="driveFolder" type="url" placeholder="Cole o link da pasta pública"><div class="album-toolbar"><button id="loadDrive" class="secondary small-button">Carregar pasta</button><a id="openDrive" class="secondary small-button" target="_blank" rel="noopener">Adicionar fotos no Drive ↗</a></div><p class="muted">Use uma pasta pública. Fotos novas entram automaticamente. Para a marca, coloque watermark.png na pasta.</p></div>
-      <div class="publish-bar"><button id="publish" class="primary" disabled>Publicar no telão</button><a href="./" class="secondary" target="_blank" rel="noopener">Abrir exibição ↗</a></div><p id="publishStatus" class="muted" role="status">Carregando ajustes publicados…</p><p><a href="diagnostico" target="_blank" rel="noopener">Testar navegador do telão ↗</a></p>
+      <div class="publish-bar"><button id="publish" class="primary" disabled>Publicar no telão</button></div><div class="display-links"><a href="./?formato=vertical" class="secondary" target="_blank" rel="noopener">Abrir vertical · 336 × 1008 ↗</a><a href="./?formato=horizontal" class="secondary" target="_blank" rel="noopener">Abrir moldura · 1344 × 1008 ↗</a></div><p id="publishStatus" class="muted" role="status">Carregando ajustes publicados…</p><p><a href="diagnostico" target="_blank" rel="noopener">Testar navegador do telão ↗</a></p>
       <label hidden class="dropzone" id="dropzone" for="zipInput" tabindex="0" role="button" aria-label="Escolher ZIP ou fotos">
         <span class="upload-icon">↥</span><strong id="dropTitle">Solte fotos ou um ZIP aqui</strong><span>ou clique para escolher os arquivos</span><span class="file-hint">JPG, PNG, WEBP, AVIF ou ZIP · até 600 fotos no álbum</span>
       </label>
@@ -48,7 +48,7 @@
         <div class="setting-row"><label for="watermarkPosition">Posição</label><select id="watermarkPosition"><option value="bottom-right">Canto inferior direito</option><option value="bottom-left">Canto inferior esquerdo</option><option value="top-right">Canto superior direito</option><option value="center">Centro</option><option value="overlay">Overlay na tela inteira</option></select></div>
         <div class="setting-row"><label for="watermarkOpacity">Opacidade da marca <output id="opacityValue">100%</output></label><input type="range" id="watermarkOpacity" min="10" max="100" value="100"></div>
         <div class="setting-row"><label for="watermarkSize">Largura <output id="sizeValue">30%</output></label><input type="range" id="watermarkSize" min="10" max="90" value="30"></div>
-        <p>Arraste a marca na prévia para ajustar a posição. Com a marca selecionada, as setas também movem.</p>
+        <p id="frameWatermarkHelp" hidden>Na moldura BRACIS, a marca fica no cabeçalho. Posição, tamanho e degradê são usados no formato vertical.</p><p>Arraste a marca na prévia para ajustar a posição. Com a marca selecionada, as setas também movem.</p>
         <button class="text-button" id="resetWatermarkPosition">Restaurar posição da marca</button>
         <div class="setting-row"><label for="watermarkFade">Degradê atrás da marca</label><input id="watermarkFade" type="checkbox" class="switch"></div>
         <div id="fadeControls" hidden>
@@ -58,7 +58,7 @@
           <div class="setting-row"><label for="fadePosition">Posição do degradê</label><select id="fadePosition"><option value="auto">Acompanhar a marca</option><option value="top">Topo</option><option value="center">Centro</option><option value="bottom">Rodapé</option></select></div>
         </div>
         <div class="setting-row resolution"><label>Resolução de referência</label><div><input aria-label="Largura em pixels" id="screenWidth" type="number" min="100" max="8000" value="336"><span>×</span><input aria-label="Altura em pixels" id="screenHeight" type="number" min="100" max="8000" value="1008"></div></div>
-        <p>336 × 1008 é uma estimativa pela proporção física de 1:3. Ajuste se o controlador do telão informar outros valores.</p>
+        <p>Os links fixos usam 336 × 1008 e 1344 × 1008. Para outro tamanho, escolha Resolução personalizada na prévia.</p>
         <div class="setting-row"><label for="fitScreen">Preencher a saída de vídeo</label><input id="fitScreen" type="checkbox" class="switch"></div><p>Ative apenas se o controlador transformar a saída do computador no painel vertical. Pode distorcer a prévia em monitores de outra proporção.</p>
         <button hidden class="secondary" id="exportAlbum" disabled>↓ Baixar álbum otimizado</button><button hidden class="text-button danger" id="clearAlbum" disabled>Apagar álbum deste navegador</button>
       </div></details>
@@ -66,8 +66,8 @@
       <p class="keyboard-hint">Na apresentação: <kbd>Espaço</kbd> pausa · <kbd>→</kbd> avança · <kbd>Esc</kbd> volta</p>
     </section>
     <section class="preview-panel" aria-label="Prévia do telão">
-      <div class="preview-top"><span><i class="live-dot"></i> PRÉVIA AO VIVO</span><span id="resolutionLabel">336 × 1008 PX</span></div>
-      <div class="preview-shell"><div class="stage" id="stage"><div id="scenes"></div><div class="stage-empty" id="emptyStage"><p>Nenhuma foto carregada</p></div><div class="watermark-layer"><div id="watermarkFadeLayer" class="watermark-fade" hidden></div><img id="watermark" class="watermark" alt="" hidden><button class="watermark-drag-target" id="watermarkDragTarget" aria-label="Mover marca d’água na prévia" title="Arraste para mover a marca" hidden></button></div><div class="screen-notice" id="screenNotice" hidden></div></div></div>
+      <div class="format-preview"><label for="previewFormat">Formato da prévia</label><select id="previewFormat"><option value="vertical">Vertical · 336 × 1008</option><option value="horizontal">Moldura BRACIS · 1344 × 1008</option><option value="custom">Resolução personalizada</option></select><p>Trocar a prévia não altera os links de exibição. Os dois formatos usam as mesmas fotos e os ajustes publicados.</p></div><div class="preview-top"><span><i class="live-dot"></i> PRÉVIA AO VIVO</span><span id="resolutionLabel">336 × 1008 PX</span></div>
+      <div class="preview-shell"><div class="stage" id="stage"><div class="screen-frame" aria-hidden="true"><div class="frame-header"><div class="frame-logo-viewport" id="frameLogoViewport"><img id="frameLogo" alt="" hidden><span id="frameBrandFallback">BRACIS</span></div><div class="frame-dots"><i></i><i></i><i></i><i></i><i></i></div></div></div><div id="scenes"></div><div class="stage-empty" id="emptyStage"><p>Nenhuma foto carregada</p></div><div class="watermark-layer"><div id="watermarkFadeLayer" class="watermark-fade" hidden></div><img id="watermark" class="watermark" alt="" hidden><button class="watermark-drag-target" id="watermarkDragTarget" aria-label="Mover marca d’água na prévia" title="Arraste para mover a marca" hidden></button></div><div class="screen-notice" id="screenNotice" hidden></div></div></div>
       <div class="preview-bottom"><span id="sceneLabel">TELÃO VERTICAL · 1:3</span><div><button class="text-button" id="previous" aria-label="Cena anterior" disabled>←</button><span id="sceneCounter">—</span><button class="text-button" id="next" aria-label="Próxima cena" disabled>→</button></div></div>
     </section>
   </main>

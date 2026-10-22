@@ -2,17 +2,22 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const cloudMode = document.body.dataset.cloud;
+  let outputFormat=new URLSearchParams(location.search).get('formato');
+  if(!['vertical','horizontal'].includes(outputFormat)){try{outputFormat=cloudMode==='admin'?localStorage.getItem('bracis-preview-format'):null;}catch{}if(!['vertical','horizontal','custom'].includes(outputFormat))outputFormat=cloudMode==='admin'?'vertical':'custom';}
   const cloudEvent = (type, detail) => window.dispatchEvent(new CustomEvent(type, {detail}));
   const modeNames = { single:'RETRATO · MOVIMENTO', mixed:'RETRATO + 2 PAISAGENS', motion:'MOTION · FAIXAS LATERAIS', pan:'PANORAMA · MOVIMENTO' };
   const availableModes = ['single','mixed','motion','pan'];
   const configDefaults = { modes:availableModes, duration:12, motionSpeed:0.5, shuffle:true, watermarkPosition:'bottom-right', watermarkOpacity:100, watermarkOffsetX:0, watermarkOffsetY:0, watermarkLayerVersion:1, watermarkSize:30, watermarkFade:false, fadeColor:'#ffffff', fadeOpacity:90, fadeSize:25, fadePosition:'auto', screenWidth:336, screenHeight:1008, fitScreen:false };
   let config = { ...configDefaults }, photos = [], mark = null, markURL = null, db = null;
-  let history = [], historyIndex = -1, bag = [], cursor = 0, sequenceCursor = 0, playing = true, busy = false, sceneVersion = 0;
+  let history = [], historyIndex = -1, bag = [], cursor = 0, sequenceCursor = 0, cycleStart = 0, playing = true, busy = false, sceneVersion = 0;
   let sceneStarted = 0, remaining = 12000, currentScene = null, uiTimer, wakeLock = null;
   let nextPhotoId = 0, removedPhoto = null, persistedPhotoIds = new Set();
   const dirtyPhotos = new Set();
   let watermarkBounds=null,watermarkDrag=null,watermarkFrame=null;
   const completedPhotos=new Set(),selectedPhotos=new Set();
+  const viewConfig=()=>window.TelaoTiming.output(config,outputFormat);
+  const isHorizontal=()=>window.TelaoTiming.horizontal(viewConfig());
+  const playbackKey=()=>JSON.stringify([config.duration,config.motionSpeed,config.modes,viewConfig().screenWidth,viewConfig().screenHeight]);
   const playback=window.TelaoPlayback.create({
     shouldRun:()=>playing&&photos.length>0,
     advance:async()=>{const shown=history[historyIndex];if(shown)shown.indices.forEach(index=>completedPhotos.add(index));await nextScene();},
@@ -50,7 +55,7 @@
   async function restartPlayback(shouldPlay=playing) {
     playback.cancel();sceneVersion++;
     if(!photos.length){$('scenes').textContent='';currentScene=null;}
-    history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;completedPhotos.clear();selectedPhotos.clear();
+    history=[];historyIndex=-1;bag=[];cursor=0;sequenceCursor=0;cycleStart=0;completedPhotos.clear();selectedPhotos.clear();
     playing=shouldPlay;$('stage').classList.toggle('paused',!playing);
     $('pause').textContent=playing?'Ⅱ':'▶';$('pause').setAttribute('aria-label',playing?'Pausar apresentação':'Retomar apresentação');
     $('emptyStage').hidden=photos.length>0;
@@ -116,6 +121,7 @@
     try { const tx = db.transaction('settings','readwrite'); tx.objectStore('settings').put(config,'config'); tx.onerror = () => {}; } catch {}
   }
   function syncConfig() {
+    const view=viewConfig(),horizontal=isHorizontal();
     for (const key of Object.keys(configDefaults)) {
       const el = $(key); if (!el) continue;
       if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key];
@@ -124,13 +130,22 @@
       const active = button.dataset.mode === 'mix' ? config.modes.length === availableModes.length : config.modes.includes(button.dataset.mode);
       button.classList.toggle('selected',active); button.setAttribute('aria-pressed',String(active));
     });
-    document.documentElement.style.setProperty('--stage-ratio',`${config.screenWidth}/${config.screenHeight}`);
-    document.documentElement.style.setProperty('--screen-w', config.screenWidth);
-    document.documentElement.style.setProperty('--screen-h', config.screenHeight);
-    $('resolutionLabel').textContent = `${config.screenWidth} × ${config.screenHeight} PX`;
+    document.documentElement.style.setProperty('--stage-ratio',`${view.screenWidth}/${view.screenHeight}`);
+    document.documentElement.style.setProperty('--screen-w',view.screenWidth);
+    document.documentElement.style.setProperty('--screen-h',view.screenHeight);
+    document.body.classList.toggle('horizontal-output',horizontal);
+    if($('previewFormat'))$('previewFormat').value=outputFormat;
+    for(const key of ['screenWidth','screenHeight','fitScreen']){$(key).disabled=outputFormat!=='custom';if(key==='fitScreen')$(key).checked=view[key];else $(key).value=view[key];}
+    for(const key of ['watermarkPosition','watermarkSize','watermarkFade','resetWatermarkPosition'])$(key).disabled=horizontal;
+    if($('frameWatermarkHelp'))$('frameWatermarkHelp').hidden=!horizontal;
+    const portraitButton=document.querySelector('[data-mode=single]'),mixedButton=document.querySelector('[data-mode=mixed]');
+    portraitButton.querySelector('strong').textContent=horizontal?'Retratos':'Retrato';portraitButton.querySelector('small').textContent=horizontal?'2 fotos lado a lado':'1 foto em movimento';
+    mixedButton.querySelector('small').textContent=horizontal?'Retrato + 2 à direita':'2 paisagens abaixo';
+    $('resolutionLabel').textContent = `${view.screenWidth} × ${view.screenHeight} PX`;
     $('opacityValue').textContent = `${config.watermarkOpacity}%`; $('sizeValue').textContent = `${config.watermarkSize}%`;
-    document.body.classList.toggle('fill-output', config.fitScreen);
+    document.body.classList.toggle('fill-output',view.fitScreen);
     const image = $('watermark'); image.dataset.position = config.watermarkPosition; image.style.opacity = config.watermarkOpacity / 100; image.style.width = config.watermarkSize + '%';
+    $('frameLogo').style.opacity=config.watermarkOpacity/100;
     renderWatermarkFade();queueWatermarkGeometry();updateCycleEstimate();
   }
   function renderWatermarkFade() {
@@ -161,8 +176,17 @@
   }
   function updateWatermarkGeometry() {
     const image=$('watermark'),target=$('watermarkDragTarget'),stage=$('stage');
-    if(!(window.CSS&&CSS.supports&&CSS.supports('aspect-ratio','1 / 3')))stage.style.width=document.body.classList.contains('presentation')&&config.fitScreen?'100vw':`${stage.clientHeight*config.screenWidth/config.screenHeight}px`;
+    const view=viewConfig(),presenting=document.body.classList.contains('presentation'),shell=stage.parentElement,padding=getComputedStyle(shell);
+    const availableWidth=presenting?window.innerWidth:Math.max(1,shell.clientWidth-parseFloat(padding.paddingLeft)-parseFloat(padding.paddingRight));
+    const availableHeight=presenting?window.innerHeight:window.innerWidth<=650?490:window.innerWidth<=950?530:window.innerWidth>=1600?660:576;
+    const stageScale=Math.min(availableWidth/view.screenWidth,availableHeight/view.screenHeight);
+    stage.style.width=`${presenting&&view.fitScreen?availableWidth:view.screenWidth*stageScale}px`;stage.style.height=`${presenting&&view.fitScreen?availableHeight:view.screenHeight*stageScale}px`;
     stage.style.setProperty('--stage-width',`${stage.clientWidth}px`);
+    if(isHorizontal()){
+      const logo=$('frameLogo'),viewport=$('frameLogoViewport'),bounds=mark?.bounds||{x:0,y:0,width:1,height:1};
+      if(mark&&logo.complete&&logo.naturalWidth){const ratio=Math.min(viewport.clientWidth/(logo.naturalWidth*bounds.width),viewport.clientHeight/(logo.naturalHeight*bounds.height));Object.assign(logo.style,{width:`${logo.naturalWidth*ratio}px`,height:`${logo.naturalHeight*ratio}px`,left:`${-bounds.x*logo.naturalWidth*ratio}px`,top:`${(viewport.clientHeight-logo.naturalHeight*bounds.height*ratio)/2-bounds.y*logo.naturalHeight*ratio}px`});}
+      target.hidden=true;watermarkBounds=null;return;
+    }
     image.style.transform=(config.watermarkPosition==='center'?'translate(-50%,-50%) ':'')+`translate(${stage.clientWidth*config.watermarkOffsetX/100}px,${stage.clientHeight*config.watermarkOffsetY/100}px)`;
     if(!mark||image.hidden||!image.complete||!image.naturalWidth){target.hidden=true;watermarkBounds=null;return;}
     const box=image.getBoundingClientRect(),panel=stage.getBoundingClientRect();
@@ -196,13 +220,15 @@
     mark = value; markURL = value ? URL.createObjectURL(value.blob) : null;
     $('watermark').hidden = !value;
     if (value) $('watermark').src = markURL; else $('watermark').removeAttribute('src');
+    $('frameLogo').hidden=!value;$('frameBrandFallback').hidden=!!value;
+    if(value)$('frameLogo').src=markURL;else $('frameLogo').removeAttribute('src');
     $('watermarkName').textContent = value ? value.name : 'Nenhuma marca carregada';
     watermarkBounds=null;renderWatermarkFade();queueWatermarkGeometry();
   }
   async function adoptWatermark(value) {
     const image=await loadImage(value.blob);
     const ratio=image.naturalWidth/image.naturalHeight;
-    const screenRatio=config.screenWidth/config.screenHeight;
+    const view=viewConfig(),screenRatio=view.screenWidth/view.screenHeight;
     if(Math.abs(ratio/screenRatio-1)<.05)config.watermarkPosition='overlay';
     else if(config.watermarkPosition==='overlay')config.watermarkPosition='bottom-right';
     value.bounds=await measureWatermark(value.blob);config.watermarkOffsetX=0;config.watermarkOffsetY=0;
@@ -217,7 +243,7 @@
     if (blob.size > 80 * 1024 * 1024) throw Error('Uma imagem excede o limite de 80 MB.');
     const img = await loadImage(blob);
     if (img.naturalWidth * img.naturalHeight > 85000000) throw Error('Imagem grande demais para processar neste navegador.');
-    const size=window.TelaoTiming.imageSize(img.naturalWidth,img.naturalHeight,watermark?2016:config.screenHeight);
+    const size=window.TelaoTiming.imageSize(img.naturalWidth,img.naturalHeight,watermark?2016:viewConfig().screenHeight);
     const canvas = document.createElement('canvas'); canvas.width=size.width;canvas.height=size.height;
     const context = canvas.getContext('2d');
     if (!context) throw Error('Não foi possível preparar a imagem.');
@@ -301,14 +327,14 @@
   }
   function makeSpec() {
     const timing=window.TelaoTiming,modes=timing.available(photos,config.modes),eligible=timing.eligible(photos,config.modes);
-    if(eligible.every(index=>selectedPhotos.has(index)))selectedPhotos.clear();
+    if(eligible.every(index=>selectedPhotos.has(index))){selectedPhotos.clear();if(isHorizontal()){cycleStart=(cycleStart+1)%modes.length;sequenceCursor=cycleStart;}}
     const remaining={portrait:0,landscape:0,square:0,unknown:0};eligible.filter(index=>!selectedPhotos.has(index)).forEach(index=>remaining[timing.orientation(photos[index])]++);
-    const next=timing.nextMode(modes,sequenceCursor,remaining);sequenceCursor=next.cursor;
-    return {mode:next.mode,indices:timing.modeRoles(next.mode).map(role=>takePhoto(role,eligible))};
+    const next=timing.nextMode(modes,sequenceCursor,remaining,viewConfig());sequenceCursor=next.cursor;
+    return {mode:next.mode,indices:timing.modeRoles(next.mode,viewConfig()).map(role=>takePhoto(role,eligible))};
   }
   function updateCycleEstimate(){
     const output=$('cycleEstimate');if(!output)return;
-    const input=photos.length?photos:60,estimate=window.TelaoTiming.cycle(input,config);
+    const input=photos.length?photos:60,estimate=window.TelaoTiming.cycle(input,viewConfig());
     output.textContent=`${photos.length?'Ciclo estimado':'Referência'} de ${estimate.photos} fotos: ${window.TelaoTiming.format(estimate.seconds)}. No modo lento, as cenas duram mais para completar o deslocamento.`;
   }
   async function identifyPhotos(items){
@@ -319,7 +345,7 @@
     for(const image of scene.querySelectorAll('.photo-main')){
       const cell=image.closest('.photo-cell'),tile=image.parentElement.classList.contains('ribbon-tile')?image.parentElement:null;
       if(!image.naturalWidth||!cell.clientWidth||!cell.clientHeight)continue;
-      const width=tile?Math.max(cell.clientWidth,cell.clientHeight*image.naturalWidth/image.naturalHeight):cell.clientWidth,height=cell.clientHeight;
+      const width=tile?Math.max(cell.clientWidth/(isHorizontal()?2:1),cell.clientHeight*image.naturalWidth/image.naturalHeight):cell.clientWidth,height=cell.clientHeight;
       if(tile)tile.style.width=`${width}px`;
       const geometry=window.TelaoTiming.cover(image.naturalWidth,image.naturalHeight,width,height);
       image.style.width=`${geometry.width}px`;image.style.height=`${geometry.height}px`;
@@ -333,7 +359,7 @@
     const scene = document.createElement('div'); scene.className = `scene ${spec.mode}`; scene.style.setProperty('--scene-duration',`${window.TelaoTiming.sceneSeconds(spec.mode,config)}s`);
     const loads = [];
     if (spec.mode === 'motion') {
-      for (let row=0;row<3;row++) {
+      for (let row=0;row<(isHorizontal()?2:3);row++) {
         const cell=document.createElement('div'); cell.className='photo-cell';
         const ribbon=document.createElement('div'); ribbon.className='ribbon'+(row%2?' reverse':'');
         const pair=spec.indices.slice(row*2,row*2+2);
@@ -352,7 +378,7 @@
     const old=currentScene; $('scenes').append(scene); currentScene=scene;layoutPanorama(scene);
     scene.getBoundingClientRect(); scene.classList.add('visible');
     if(old) setTimeout(()=>{old.querySelectorAll('img').forEach(image=>image.removeAttribute('src'));old.remove();},900);
-    $('sceneLabel').textContent=modeNames[spec.mode]; $('sceneCounter').textContent=String(historyIndex+1).padStart(2,'0');
+    $('sceneLabel').textContent=isHorizontal()&&spec.mode==='single'?'RETRATOS · LADO A LADO':modeNames[spec.mode]; $('sceneCounter').textContent=String(historyIndex+1).padStart(2,'0');
     remaining=window.TelaoTiming.sceneSeconds(spec.mode,config)*1000;
     if(playing) schedule();
   }
@@ -376,12 +402,14 @@
   async function present() {
     if(!photos.length)return;
     document.body.classList.add('presentation');$('exitPresentation').hidden=false;showControls();
+    queueWatermarkGeometry();
     try {if(!document.fullscreenElement)await document.documentElement.requestFullscreen();}catch{notice('Use a opção Tela cheia do navegador para ocultar as barras.');}
     await requestWakeLock();
   }
   function exitPresentation() {
     if(cloudMode==='display')return;
     document.body.classList.remove('presentation','controls-visible');$('exitPresentation').hidden=true;
+    queueWatermarkGeometry();
     if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
     if(wakeLock) {wakeLock.release().catch(()=>{});wakeLock=null;}
   }
@@ -396,8 +424,10 @@
     }catch(error){status('Não foi possível exportar: '+error.message,true);}finally{busy=false;enabled();}
   }
   $('watermark').addEventListener('load',queueWatermarkGeometry);
-  if(typeof ResizeObserver!=='undefined')new ResizeObserver(queueWatermarkGeometry).observe($('stage'));
-  else window.addEventListener('resize',queueWatermarkGeometry);
+  $('frameLogo').addEventListener('load',queueWatermarkGeometry);
+  window.addEventListener('resize',queueWatermarkGeometry);
+  if(typeof ResizeObserver!=='undefined'){const observer=new ResizeObserver(queueWatermarkGeometry);observer.observe($('stage'));observer.observe($('stage').parentElement);}
+  if($('previewFormat'))$('previewFormat').addEventListener('change',async event=>{outputFormat=event.target.value;try{localStorage.setItem('bracis-preview-format',outputFormat);}catch{}syncConfig();await restartPlayback();cloudEvent('telao:format');});
   $('watermarkDragTarget').addEventListener('pointerdown',event=>{
     if(!mark||busy||event.button!==0)return;
     event.preventDefault();watermarkDrag={x:event.clientX,y:event.clientY,id:event.pointerId};
@@ -451,7 +481,7 @@
       else if(['duration','motionSpeed','watermarkOpacity','watermarkSize','fadeOpacity','fadeSize'].includes(key))config[key]=Number(el.value);
       else config[key]=el.value;
       if(key==='watermarkPosition'){config.watermarkOffsetX=0;config.watermarkOffsetY=0;}
-      syncConfig();saveConfig();if(['duration','motionSpeed'].includes(key)&&photos.length)showScene(history[historyIndex]);if(key==='shuffle')bag=[];
+      syncConfig();saveConfig();if(['duration','motionSpeed'].includes(key)&&photos.length)showScene(history[historyIndex]);if(['screenWidth','screenHeight'].includes(key)&&photos.length)restartPlayback();if(key==='shuffle')bag=[];
     });
     if(el.type==='range'||el.type==='color')el.addEventListener('input',()=>{config[key]=el.type==='range'?Number(el.value):el.value;syncConfig();});
   }
@@ -495,8 +525,9 @@
     syncConfig();enabled();
     window.Telao={
       getConfig:()=>JSON.parse(JSON.stringify(config)),
+      getPlaybackConfig:()=>JSON.parse(JSON.stringify(viewConfig())),
       getPlaybackProgress:()=>{const eligible=window.TelaoTiming.eligible(photos,config.modes);return {completed:eligible.filter(index=>completedPhotos.has(index)).length,total:eligible.length};},
-      setConfig(value){const previous=`${config.duration}:${config.motionSpeed}:${config.modes}`;config={...configDefaults,...value};config.modes=window.TelaoTiming.modes(config.modes);syncConfig();if(currentScene&&photos.length&&previous!==`${config.duration}:${config.motionSpeed}:${config.modes}`){history=[];historyIndex=-1;sequenceCursor=0;selectedPhotos.clear();nextScene();}},
+      setConfig(value){const previous=playbackKey();config={...configDefaults,...value};config.modes=window.TelaoTiming.modes(config.modes);syncConfig();if(currentScene&&photos.length&&previous!==playbackKey()){history=[];historyIndex=-1;sequenceCursor=0;selectedPhotos.clear();nextScene();}},
       async setAlbum(items){
         const old=photos;photos=items.map(p=>({...p,url:URL.createObjectURL(p.blob)}));await identifyPhotos(photos);
         await restartPlayback();old.forEach(p=>URL.revokeObjectURL(p.url));enabled();

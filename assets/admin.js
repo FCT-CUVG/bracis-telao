@@ -63,6 +63,7 @@ $('publish').addEventListener('click',async()=>{
   }catch(error){$('publishStatus').textContent='Não foi possível publicar: '+error.message;}finally{publishing=false;updatePublish();}
 });
 window.addEventListener('telao:change',changed);
+window.addEventListener('telao:format',()=>{if(authorizedUser&&loaded)refresh();});
 window.addEventListener('telao:exclude',async({detail})=>{lastExcluded=detail.id;source.excludedIds=[...new Set([...source.excludedIds,detail.id])];changed();await refresh();$('undoPhoto').hidden=false;});
 $('undoPhoto').addEventListener('click',async()=>{if(!lastExcluded)return;source.excludedIds=source.excludedIds.filter(id=>id!==lastExcluded);lastExcluded=null;changed();await refresh();$('undoPhoto').hidden=true;});
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});

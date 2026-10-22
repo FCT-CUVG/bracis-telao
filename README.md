@@ -1,6 +1,8 @@
 # BRACIS — fotos para o telão
 
 - **Exibição automática:** https://bracis-telao.web.app/
+- **Vertical 336 × 1008:** https://bracis-telao.web.app/?formato=vertical
+- **Moldura BRACIS 1344 × 1008:** https://bracis-telao.web.app/?formato=horizontal
 - **Painel:** https://bracis-telao.web.app/admin
 - **Versão local com fotos/ZIP:** https://bracis-telao.web.app/local
 - **Código:** https://github.com/FCT-CUVG/bracis-telao
@@ -17,7 +19,11 @@ O telão abre diretamente a apresentação publicada. Não exige login, importa�
 
 A lista do painel tem busca, páginas de 100 itens, visualização individual e exclusão da apresentação. O original permanece no Drive. A exclusão pode ser desfeita ou restaurada antes de publicar.
 
-A referência é **336 × 1008**, proporção vertical 1:3. A largura ainda deve ser confirmada no controlador físico do telão.
+Os dois links fixam suas próprias dimensões e podem ser usados ao mesmo tempo: **336 × 1008** (vertical 1:3) e **1344 × 1008** (horizontal 4:3). Ambos usam a mesma pasta e os ajustes publicados no painel. O endereço sem parâmetro continua respeitando a resolução compartilhada existente.
+
+No painel, **Formato da prévia** alterna a visualização sem publicar ou mudar a resolução dos links. **Publicar no telão** continua salvando os ajustes compartilhados. O formato horizontal tem moldura branca e azul, bolinhas da identidade BRACIS e a marca no cabeçalho; a área transparente ao redor da marca é compensada no layout, sem editar o PNG. Os controles de posição, tamanho e degradê da marca são usados no vertical.
+
+As composições horizontais adaptam o mesmo conjunto de tipos: dois retratos lado a lado; um retrato à esquerda com duas paisagens à direita; duas faixas laterais; ou panorama. Todas continuam em movimento, com preenchimento proporcional das células. O vertical mantém um retrato, retrato com duas paisagens abaixo, três faixas ou panorama. Como o número de fotos por cena muda, o ciclo estimado é calculado para a prévia selecionada.
 
 ## Fotos e memória
 

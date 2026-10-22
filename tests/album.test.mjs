@@ -28,3 +28,9 @@ test('Changing the LED height rebuilds the image profile even with an unchanged 
  await album.update({folderId:'folder'});const before=batches.length;assert.ok(heights.every(h=>h===1008));
  heights.length=0;height=720;await album.update({folderId:'folder'});assert.ok(batches.length>before);assert.ok(heights.every(h=>h===720));
 });
+test('Image preparation follows the display format instead of a shared custom resolution',async()=>{
+ const {album}=setup();const heights=[];
+ album.player.getConfig=()=>({screenHeight:8000,duration:12});album.player.getPlaybackConfig=()=>({screenWidth:1344,screenHeight:1008,duration:12});
+ album.services.loadFile=async(file,mark,height)=>{heights.push(height);return {...file,blob:new Blob(['foto'])};};
+ await album.update({folderId:'folder'});assert.ok(heights.length>0);assert.ok(heights.every(height=>height===1008));
+});
