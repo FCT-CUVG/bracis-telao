@@ -3,6 +3,9 @@
 - **Exibição automática:** https://bracis-telao.web.app/
 - **Vertical 336 × 1008:** https://bracis-telao.web.app/?formato=vertical
 - **Moldura BRACIS 1344 × 1008:** https://bracis-telao.web.app/?formato=horizontal
+- **Telão 4:3 recebendo sinal 16:9:** https://bracis-telao.web.app/?formato=horizontal&sinal=16x9
+
+O link com `sinal=16x9` desenha a composição em 4:3 e expande horizontalmente para preencher todo o sinal recebido pelo navegador. Em um sinal 1920 × 1080, a expansão é de 33,33%; a compressão do controlador para 4:3 desfaz essa expansão. Fotos, fundo e marca recebem a mesma compensação, mantendo o enquadramento e o movimento em coordenadas 4:3. Em um monitor comum 16:9, esse link aparece propositalmente mais largo. Use somente quando o controlador comprime o sinal inteiro em 4:3; ele não corrige faixas inseridas depois do navegador. A proporção física precisa ser conferida no equipamento. Os links normais e os ajustes compartilhados continuam independentes dessa opção.
 - **Painel:** https://bracis-telao.web.app/admin
 - **Versão local com fotos/ZIP:** https://bracis-telao.web.app/local
 - **Código:** https://github.com/FCT-CUVG/bracis-telao

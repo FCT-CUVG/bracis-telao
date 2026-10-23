@@ -65,3 +65,17 @@ test('Horizontal photo area keeps 16:9 centered within the frame margins at ever
  const area=timing.frameArea(1344,1008,{x:10,top:10,bottom:10});
  assert.ok(Math.abs(area.width-1075.2)<1e-9);assert.ok(Math.abs(area.height-604.8)<1e-9);
 });
+
+test('Signal compensation fills a 16:9 input and restores physical proportions after the LED squeeze',()=>{
+ const config={screenWidth:1344,screenHeight:1008};
+ for(const [w,h] of [[1920,1080],[1280,720],[1366,768],[1344,1008]]){
+  const signal=timing.signalStage(w,h,config);
+  assert.ok(Math.abs(signal.width/signal.height-4/3)<1e-10);
+  assert.ok(Math.abs(signal.width*signal.scaleX-w)<1e-9);assert.equal(signal.height,h);
+  const controllerScale=(4/3)/(w/h);
+  assert.ok(Math.abs(signal.scaleX*controllerScale-1)<1e-10);
+  const area=timing.frameArea(signal.width,signal.height,{x:0,top:10,bottom:10});
+  assert.ok(Math.abs(area.width*signal.scaleX*controllerScale/area.height-16/9)<1e-10);
+ }
+ assert.equal(timing.signalStage(1920,1080,config).scaleX,4/3);
+});

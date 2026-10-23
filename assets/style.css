@@ -226,3 +226,6 @@ progress { width: 100%; height: 5px; accent-color: var(--accent); }
 .horizontal-output.has-custom-background .stage-empty{background:transparent;}
 .horizontal-output.has-custom-background .stage-empty p{padding:12px;background:#fffffff0;border-radius:5px;}
 .frame-background-settings .settings-content>p{overflow-wrap:anywhere;}
+
+.presentation.signal-compensated .preview-shell{overflow:hidden;}
+.presentation.signal-compensated .stage{transform-origin:center center;}
